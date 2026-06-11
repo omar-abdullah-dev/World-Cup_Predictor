@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # World Cup Predictor
 
 A web-based football match prediction platform built with **Java 17**, **Jakarta EE 10**, and **Jakarta Faces (JSF 4)**.
@@ -143,3 +144,6 @@ Run the test suite with:
 mvn test
 ```
 
+=======
+# World-Cup_Predictor
+>>>>>>> 260a42e2d5a1f89761b0ba712b8a3c8c6e7a97ce
