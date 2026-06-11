@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="http://xmlns.jcp.org/jsf/html"
+                xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
+                xmlns:f="http://xmlns.jcp.org/jsf/core"
+                template="/templates/layout.xhtml">
+
+    <f:metadata>
+        <f:viewParam name="group" value="#{groupDetailsBean.group}"/>
+    </f:metadata>
+
+    <ui:define name="title"><h:outputText value="#{groupDetailsBean.groupTitle}"/> Details - World Cup Predictor</ui:define>
+
+    <ui:define name="content">
+        <div class="page-header">
+            <h2>&#127750; <h:outputText value="#{groupDetailsBean.groupTitle}"/></h2>
+            <p>View matches in this group and submit predictions in one step</p>
+            <h:link outcome="groups" value="&#8592; Back to Groups" styleClass="back-link"/>
+        </div>
+
+        <h:panelGroup rendered="#{groupDetailsBean.groupMissing}">
+            <div class="card alert-warning">
+                <h3>&#9888; No group selected</h3>
+                <p class="alert-body">Choose a group from the dashboard or groups page.</p>
+                <h:link outcome="groups" value="View Groups" styleClass="btn btn-primary"/>
+            </div>
+        </h:panelGroup>
+
+        <h:panelGroup rendered="#{not groupDetailsBean.groupMissing and not groupDetailsBean.isUserSelected()}">
+            <div class="card alert-warning">
+                <h3>&#9888; Please select a user</h3>
+                <p class="alert-body">You need to select a user before making predictions.</p>
+                <h:link outcome="users" value="Select User" styleClass="btn btn-primary"/>
+            </div>
+        </h:panelGroup>
+
+        <h:panelGroup rendered="#{not empty groupDetailsBean.successMessage}">
+            <div class="message-success"><h:outputText value="#{groupDetailsBean.successMessage}"/></div>
+        </h:panelGroup>
+        <h:panelGroup rendered="#{not empty groupDetailsBean.errorMessage}">
+            <div class="message-error"><h:outputText value="#{groupDetailsBean.errorMessage}"/></div>
+        </h:panelGroup>
+
+        <h:panelGroup rendered="#{not groupDetailsBean.groupMissing and empty groupDetailsBean.matchRows}">
+            <div class="card">
+                <p class="empty-state">No matches found for this group.</p>
+            </div>
+        </h:panelGroup>
+
+        <h:panelGroup rendered="#{not empty groupDetailsBean.matchRows}">
+            <div class="cards-grid cards-grid-1-col">
+                <ui:repeat value="#{groupDetailsBean.matchRows}" var="row">
+                    <div class="card match-card">
+                        <div class="match-header">
+                            <div class="match-title">
+                                <h:outputText value="#{row.match.homeTeam} vs #{row.match.awayTeam}"/>
+                            </div>
+                            <h:panelGroup rendered="#{row.match.status.name() == 'FINISHED'}" styleClass="match-status status-finished" layout="block">
+                                <h:outputText value="&#128308; Finished"/>
+                            </h:panelGroup>
+                            <h:panelGroup rendered="#{row.match.status.name() != 'FINISHED' and row.predictionOpen}" styleClass="match-status status-open" layout="block">
+                                <h:outputText value="&#128994; Open"/>
+                            </h:panelGroup>
+                            <h:panelGroup rendered="#{row.predictionLocked}" styleClass="match-status status-closed" layout="block">
+                                <h:outputText value="&#128993; Prediction Closed"/>
+                            </h:panelGroup>
+                        </div>
+
+                        <div class="match-date match-date-spaced">
+                            <h:outputText value="#{groupDetailsBean.formatDateTime(row.match.kickoffDate)}"/>
+                        </div>
+
+                        <h:panelGroup rendered="#{row.match.status.name() == 'FINISHED'}" layout="block" styleClass="match-finished-block">
+                            <div class="match-result-row">
+                                <span class="match-result-team match-result-team-left">
+                                    <h:outputText value="#{row.match.homeTeam}"/>
+                                </span>
+                                <span class="match-result-score">
+                                    <h:outputText value="#{row.match.homeScore}"/> - <h:outputText value="#{row.match.awayScore}"/>
+                                </span>
+                                <span class="match-result-team match-result-team-right">
+                                    <h:outputText value="#{row.match.awayTeam}"/>
+                                </span>
+                            </div>
+
+                            <h:panelGroup rendered="#{groupDetailsBean.isUserSelected()}" layout="block" styleClass="match-prediction-info">
+                                <h:panelGroup rendered="#{row.hasPrediction}">
+                                    <div class="match-prediction-text">
+                                        Your Prediction:
+                                        <strong>
+                                            <h:outputText value="#{row.match.homeTeam} #{row.prediction.predictedHomeScore} : #{row.prediction.predictedAwayScore} #{row.match.awayTeam}"/>
+                                        </strong>
+                                    </div>
+                                    <div>
+                                        <span class="points-badge #{row.prediction.earnedPoints == 2 ? 'points-exact' : row.prediction.earnedPoints == 1 ? 'points-outcome' : 'points-zero'}">
+                                            Earned Points: <h:outputText value="#{row.prediction.earnedPoints} pts"/>
+                                        </span>
+                                    </div>
+                                </h:panelGroup>
+                                <h:panelGroup rendered="#{not row.hasPrediction}">
+                                    <span class="points-badge points-zero points-sm">No prediction submitted</span>
+                                </h:panelGroup>
+                            </h:panelGroup>
+                        </h:panelGroup>
+
+                        <h:panelGroup rendered="#{row.predictionOpen and groupDetailsBean.isUserSelected()}">
+                            <h:form id="matchForm" prependId="false" styleClass="match-prediction-form">
+                                <div class="match-content-row">
+                                    <div class="match-team-left">
+                                        <h:outputText value="#{row.match.homeTeam}"/>
+                                    </div>
+                                    <div class="match-scores-center">
+                                        <h:inputText id="homeScore_#{row.matchId}" value="#{row.homeScore}"
+                                                     required="true" requiredMessage="Home score is required"
+                                                     styleClass="score-input"
+                                                     title="Enter home score for #{row.match.homeTeam}">
+                                            <f:convertNumber integerOnly="true"/>
+                                            <f:validateLongRange minimum="0"/>
+                                        </h:inputText>
+                                        <span class="score-separator">:</span>
+                                        <h:inputText id="awayScore_#{row.matchId}" value="#{row.awayScore}"
+                                                     required="true" requiredMessage="Away score is required"
+                                                     styleClass="score-input"
+                                                     title="Enter away score for #{row.match.awayTeam}">
+                                            <f:convertNumber integerOnly="true"/>
+                                            <f:validateLongRange minimum="0"/>
+                                        </h:inputText>
+                                    </div>
+                                    <div class="match-team-right">
+                                        <h:outputText value="#{row.match.awayTeam}"/>
+                                    </div>
+                                </div>
+
+                                <h:panelGroup rendered="#{row.hasPrediction}" styleClass="match-prediction-text match-prediction-text-accent">
+                                    Your Prediction:
+                                    <strong>
+                                        <h:outputText value="#{row.match.homeTeam} #{row.prediction.predictedHomeScore} : #{row.prediction.predictedAwayScore} #{row.match.awayTeam}"/>
+                                    </strong>
+                                </h:panelGroup>
+
+                                <h:commandButton value="#{row.hasPrediction ? 'Update Prediction' : 'Save Prediction'}"
+                                                 action="#{groupDetailsBean.submitPrediction(row.matchId)}"
+                                                 styleClass="match-action-btn"/>
+                            </h:form>
+                        </h:panelGroup>
+
+                        <h:panelGroup rendered="#{row.predictionLocked and groupDetailsBean.isUserSelected()}">
+                            <div class="pred-locked-notice">
+                                <p class="alert-body">Predictions are locked — this match has already started.</p>
+                                <h:panelGroup rendered="#{row.hasPrediction}">
+                                    <p class="match-prediction-text">
+                                        Your Prediction:
+                                        <strong>
+                                            <h:outputText value="#{row.match.homeTeam} #{row.prediction.predictedHomeScore} : #{row.prediction.predictedAwayScore} #{row.match.awayTeam}"/>
+                                        </strong>
+                                    </p>
+                                </h:panelGroup>
+                            </div>
+                        </h:panelGroup>
+
+                        <h:panelGroup rendered="#{row.predictionOpen and not groupDetailsBean.isUserSelected()}">
+                            <div class="match-content-row">
+                                <div class="match-team-left">
+                                    <h:outputText value="#{row.match.homeTeam}"/>
+                                </div>
+                                <div class="match-vs">VS</div>
+                                <div class="match-team-right">
+                                    <h:outputText value="#{row.match.awayTeam}"/>
+                                </div>
+                            </div>
+                        </h:panelGroup>
+                    </div>
+                </ui:repeat>
+            </div>
+        </h:panelGroup>
+    </ui:define>
+</ui:composition>

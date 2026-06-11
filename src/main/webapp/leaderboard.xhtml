@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="http://xmlns.jcp.org/jsf/html"
+                xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
+                xmlns:f="http://xmlns.jcp.org/jsf/core"
+                template="/templates/layout.xhtml">
+
+    <ui:define name="title">Leaderboard - World Cup Predictor</ui:define>
+
+    <ui:define name="content">
+        <div class="page-header">
+            <h2>&#127942; Leaderboard</h2>
+            <p>Current standings in the World Cup prediction competition</p>
+        </div>
+
+        <h:panelGroup rendered="#{leaderboardBean.podium.size() > 0}" layout="block">
+            <div class="podium-container">
+                <ui:repeat value="#{leaderboardBean.podium}" var="user" varStatus="status">
+                    <div class="podium-item">
+                        <div class="podium-medal">
+                            <h:outputText value="#{leaderboardBean.getPodiumMedal(status.index)}"/>
+                        </div>
+                        <div class="podium-rank #{status.index == 0 ? 'rank-1' : status.index == 1 ? 'rank-2' : 'rank-3'}">
+                            <h:outputText value="#{status.index + 1}"/>
+                        </div>
+                        <div class="podium-username">
+                            <h:outputText value="#{user.username}"/>
+                        </div>
+                        <div class="podium-points">
+                            <h:outputText value="#{user.totalPoints}"/> pts
+                        </div>
+                    </div>
+                </ui:repeat>
+            </div>
+        </h:panelGroup>
+
+        <div class="card">
+            <h3>&#128202; Full Rankings (#{leaderboardBean.totalParticipants} participants)</h3>
+            <h:panelGroup rendered="#{empty leaderboardBean.leaderboard}">
+                <p class="empty-state">No users yet.</p>
+            </h:panelGroup>
+            <h:panelGroup rendered="#{not empty leaderboardBean.leaderboard}">
+                <h:dataTable value="#{leaderboardBean.leaderboard}" var="user" rowIndexVar="rank"
+                             styleClass="data-table">
+                    <h:column>
+                        <f:facet name="header">Rank</f:facet>
+                        <span class="leaderboard-rank #{rank == 0 ? 'rank-1' : rank == 1 ? 'rank-2' : rank == 2 ? 'rank-3' : 'rank-default'}">
+                            <h:outputText value="#{rank + 1}"/>
+                        </span>
+                    </h:column>
+                    <h:column>
+                        <f:facet name="header">Username</f:facet>
+                        <strong><h:outputText value="#{user.username}"/></strong>
+                    </h:column>
+                    <h:column>
+                        <f:facet name="header">Total Points</f:facet>
+                        <span class="points-badge"><h:outputText value="#{user.totalPoints}"/></span>
+                    </h:column>
+                </h:dataTable>
+            </h:panelGroup>
+        </div>
+    </ui:define>
+</ui:composition>

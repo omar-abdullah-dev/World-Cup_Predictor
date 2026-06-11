@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="http://xmlns.jcp.org/jsf/html"
+                xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
+                xmlns:f="http://xmlns.jcp.org/jsf/core"
+                template="/templates/layout.xhtml">
+
+    <ui:define name="title">Predictions - World Cup Predictor</ui:define>
+
+    <ui:define name="content">
+
+        <h:panelGroup id="messagesPanel" layout="block">
+            <h:panelGroup rendered="#{not empty predictionBean.successMessage}">
+                <div class="message-success message-success-check">
+                    <h:outputText value="#{predictionBean.successMessage}"/>
+                </div>
+            </h:panelGroup>
+            <h:panelGroup rendered="#{not empty predictionBean.errorMessage}">
+                <div class="message-error">
+                    <h:outputText value="#{predictionBean.errorMessage}"/>
+                </div>
+            </h:panelGroup>
+        </h:panelGroup>
+
+        <div class="page-header">
+            <h2>&#127919; Predictions</h2>
+            <p>Select your name then predict each match</p>
+        </div>
+
+        <h:form id="userSelectionForm">
+            <div class="user-select-card">
+                <span class="user-select-label">&#128100; Who are you?</span>
+                <h:selectOneMenu id="globalUserId"
+                                 value="#{predictionBean.userId}"
+                                 styleClass="user-select-menu">
+                    <f:selectItem itemLabel="-- Select your name --" itemValue=""/>
+                    <f:selectItems value="#{predictionBean.users}" var="u"
+                                   itemLabel="#{u.username}" itemValue="#{u.id}"/>
+                    <f:ajax listener="#{predictionBean.onUserChange}"
+                            render=":messagesPanel :upcomingMatchesGroup :finishedMatchesPanel"/>
+                </h:selectOneMenu>
+            </div>
+        </h:form>
+
+        <h:panelGroup id="upcomingMatchesGroup" layout="block">
+            <h:panelGroup rendered="#{empty predictionBean.upcomingRows}">
+                <p class="empty-state">No upcoming matches available.</p>
+            </h:panelGroup>
+
+            <h:panelGroup rendered="#{not empty predictionBean.upcomingRows}">
+                <div class="section-label">Upcoming — Submit your predictions</div>
+
+                <ui:repeat value="#{predictionBean.upcomingRows}" var="row" varStatus="status">
+                    <h:form prependId="false" styleClass="pred-match-form">
+                        <div class="pred-match-card">
+                            <div class="pred-match-card-header">
+                                <span class="match-stage">Match #<h:outputText value="#{status.index + 1}"/></span>
+                                <span class="match-kickoff">
+                                    <h:outputText value="#{predictionBean.formatPredictionKickoff(row.match.kickoffDate)}"/>
+                                </span>
+                            </div>
+
+                            <div class="pred-match-card-body">
+                                <div class="pred-match-team">
+                                    <div class="team-initials-badge">
+                                        <h:outputText value="#{predictionBean.getTeamInitials(row.match.homeTeam)}"/>
+                                    </div>
+                                    <span class="match-team-name"><h:outputText value="#{row.match.homeTeam}"/></span>
+                                </div>
+
+                                <div class="pred-score-wrap">
+                                    <div class="pred-side-ctrl">
+                                        <button type="button" class="pred-ctrl-btn" onclick="stepScore(this, -1)">−</button>
+                                        <h:inputText id="homeInput" value="#{row.homeScore}"
+                                                     styleClass="pred-score-input">
+                                            <f:convertNumber integerOnly="true"/>
+                                        </h:inputText>
+                                        <button type="button" class="pred-ctrl-btn" onclick="stepScore(this, 1)">+</button>
+                                    </div>
+
+                                    <span class="pred-ctrl-sep">:</span>
+
+                                    <div class="pred-side-ctrl">
+                                        <button type="button" class="pred-ctrl-btn" onclick="stepScore(this, -1)">−</button>
+                                        <h:inputText id="awayInput" value="#{row.awayScore}"
+                                                     styleClass="pred-score-input">
+                                            <f:convertNumber integerOnly="true"/>
+                                        </h:inputText>
+                                        <button type="button" class="pred-ctrl-btn" onclick="stepScore(this, 1)">+</button>
+                                    </div>
+                                </div>
+
+                                <div class="pred-match-team">
+                                    <div class="team-initials-badge">
+                                        <h:outputText value="#{predictionBean.getTeamInitials(row.match.awayTeam)}"/>
+                                    </div>
+                                    <span class="match-team-name"><h:outputText value="#{row.match.awayTeam}"/></span>
+                                </div>
+                            </div>
+
+                            <div class="pred-match-card-footer">
+                                <span class="pred-hint">Type score or use + / − buttons</span>
+                                <h:commandButton value="Submit ✓"
+                                                 action="#{predictionBean.submitPredictionFromLoop(row)}"
+                                                 styleClass="pred-submit-btn">
+                                    <f:ajax execute="@form" render=":messagesPanel :upcomingMatchesGroup :finishedMatchesPanel"/>
+                                </h:commandButton>
+                            </div>
+                        </div>
+                    </h:form>
+                </ui:repeat>
+            </h:panelGroup>
+        </h:panelGroup>
+
+        <h:panelGroup rendered="#{not empty predictionBean.startedMatches}" layout="block">
+            <div class="section-label">In Progress — Predictions Locked</div>
+            <ui:repeat value="#{predictionBean.startedMatches}" var="match">
+                <div class="pred-match-card pred-match-card-finished">
+                    <div class="pred-match-card-header">
+                        <span class="match-stage">Match #<h:outputText value="#{match.id}"/></span>
+                        <span class="match-kickoff">
+                            <h:outputText value="#{predictionBean.formatPredictionKickoff(match.kickoffDate)}"/>
+                        </span>
+                    </div>
+                    <div class="pred-match-card-body">
+                        <div class="pred-match-team">
+                            <div class="team-initials-badge">
+                                <h:outputText value="#{predictionBean.getTeamInitials(match.homeTeam)}"/>
+                            </div>
+                            <span class="match-team-name"><h:outputText value="#{match.homeTeam}"/></span>
+                        </div>
+                        <div class="pred-score-wrap">
+                            <span class="match-vs">LIVE</span>
+                        </div>
+                        <div class="pred-match-team">
+                            <div class="team-initials-badge">
+                                <h:outputText value="#{predictionBean.getTeamInitials(match.awayTeam)}"/>
+                            </div>
+                            <span class="match-team-name"><h:outputText value="#{match.awayTeam}"/></span>
+                        </div>
+                    </div>
+                    <div class="pred-match-card-footer">
+                        <span class="pred-hint pred-hint-muted">Predictions closed — match has started.</span>
+                        <h:panelGroup rendered="#{predictionBean.hasPredictionForMatch(match.id)}">
+                            <span class="pred-hint">
+                                Your pick:
+                                <strong>
+                                    <h:outputText value="#{predictionBean.getExistingPrediction(predictionBean.userId, match.id).predictedHomeScore}"/>
+                                    -
+                                    <h:outputText value="#{predictionBean.getExistingPrediction(predictionBean.userId, match.id).predictedAwayScore}"/>
+                                </strong>
+                            </span>
+                        </h:panelGroup>
+                    </div>
+                </div>
+            </ui:repeat>
+        </h:panelGroup>
+
+        <h:panelGroup id="finishedMatchesPanel" layout="block">
+            <h:panelGroup rendered="#{not empty predictionBean.finishedMatches}">
+                <div class="section-label">Finished — Results &amp; Points</div>
+
+                <ui:repeat value="#{predictionBean.finishedMatches}" var="match">
+                    <div class="pred-match-card pred-match-card-finished">
+                        <div class="pred-match-card-header">
+                            <span class="match-stage">Match #<h:outputText value="#{match.id}"/></span>
+                            <span class="match-kickoff">
+                                <h:outputText value="#{predictionBean.formatPredictionKickoff(match.kickoffDate)}"/>
+                            </span>
+                        </div>
+
+                        <div class="pred-match-card-body">
+                            <div class="pred-match-team">
+                                <div class="team-initials-badge">
+                                    <h:outputText value="#{predictionBean.getTeamInitials(match.homeTeam)}"/>
+                                </div>
+                                <span class="match-team-name"><h:outputText value="#{match.homeTeam}"/></span>
+                            </div>
+
+                            <div class="pred-score-wrap pred-score-wrap-result">
+                                <span class="match-score-box #{match.homeScore gt match.awayScore ? 'winner' : ''}">
+                                    <h:outputText value="#{match.homeScore}"/>
+                                </span>
+                                <span class="match-score-sep">-</span>
+                                <span class="match-score-box #{match.awayScore gt match.homeScore ? 'winner' : ''}">
+                                    <h:outputText value="#{match.awayScore}"/>
+                                </span>
+                            </div>
+
+                            <div class="pred-match-team">
+                                <div class="team-initials-badge">
+                                    <h:outputText value="#{predictionBean.getTeamInitials(match.awayTeam)}"/>
+                                </div>
+                                <span class="match-team-name"><h:outputText value="#{match.awayTeam}"/></span>
+                            </div>
+                        </div>
+
+                        <div class="pred-match-card-footer">
+                            <h:panelGroup rendered="#{predictionBean.userId != null and predictionBean.getExistingPrediction(predictionBean.userId, match.id) != null}">
+                                <span class="pred-hint">
+                                    Your pick:
+                                    <strong>
+                                        <h:outputText value="#{predictionBean.getExistingPrediction(predictionBean.userId, match.id).predictedHomeScore}"/>
+                                        -
+                                        <h:outputText value="#{predictionBean.getExistingPrediction(predictionBean.userId, match.id).predictedAwayScore}"/>
+                                    </strong>
+                                </span>
+                                <span class="points-badge #{predictionBean.getPointsBadgeClass(predictionBean.getExistingPrediction(predictionBean.userId, match.id).earnedPoints)} pred-points-inline">
+                                    <h:outputText value="#{predictionBean.getExistingPrediction(predictionBean.userId, match.id).earnedPoints}"/> pts
+                                </span>
+                            </h:panelGroup>
+                            <h:panelGroup rendered="#{predictionBean.userId != null and predictionBean.getExistingPrediction(predictionBean.userId, match.id) == null}">
+                                <span class="pred-hint pred-hint-muted">No prediction submitted</span>
+                            </h:panelGroup>
+                            <h:panelGroup rendered="#{predictionBean.userId == null}">
+                                <span class="pred-hint pred-hint-muted">Select a user to see your history</span>
+                            </h:panelGroup>
+                            <span class="pred-status-finished">Finished</span>
+                        </div>
+                    </div>
+                </ui:repeat>
+            </h:panelGroup>
+        </h:panelGroup>
+
+        <script type="text/javascript">
+            //<![CDATA[
+            function stepScore(button, delta) {
+                var wrap = button.parentElement;
+                if (!wrap) return;
+                var inputEl = wrap.querySelector('.pred-score-input');
+                if (!inputEl) return;
+                var current = parseInt(inputEl.value, 10);
+                if (isNaN(current)) current = 0;
+                var newVal = current + delta;
+                if (newVal < 0) newVal = 0;
+                if (newVal > 20) newVal = 20;
+                inputEl.value = newVal;
+            }
+            //]]>
+        </script>
+
+    </ui:define>
+</ui:composition>

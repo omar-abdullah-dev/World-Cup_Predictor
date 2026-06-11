@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
+      xmlns:f="http://xmlns.jcp.org/jsf/core">
+<h:head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title><ui:insert name="title">World Cup Predictor</ui:insert></title>
+    <h:outputStylesheet name="css/styles.css"/>
+</h:head>
+<h:body>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="header-content">
+                <h1 class="app-title">
+                    <span class="title-icon">&#9917;</span> World Cup Predictor
+                </h1>
+                <input type="checkbox" id="nav-toggle" class="nav-toggle"/>
+                <label for="nav-toggle" class="nav-toggle-label" title="Toggle navigation">&#9776;</label>
+                <nav class="app-nav">
+                    <h:link outcome="index" value="Dashboard"
+                            styleClass="nav-link#{navBean.isActive('index') ? ' active' : ''}"/>
+                    <h:link outcome="groups" value="Groups"
+                            styleClass="nav-link#{navBean.isActive('groups') ? ' active' : ''}"/>
+                    <h:link outcome="matches" value="Matches"
+                            styleClass="nav-link#{navBean.isActive('matches') ? ' active' : ''}"/>
+                    <h:link outcome="predictions" value="Predictions"
+                            styleClass="nav-link#{navBean.isActive('predictions') ? ' active' : ''}"/>
+                    <h:link outcome="leaderboard" value="Leaderboard"
+                            styleClass="nav-link#{navBean.isActive('leaderboard') ? ' active' : ''}"/>
+                    <h:link outcome="users" value="Users"
+                            styleClass="nav-link#{navBean.isActive('users') ? ' active' : ''}"/>
+                    <h:panelGroup rendered="#{authBean.loggedIn}" layout="inline">
+                        <h:form styleClass="nav-logout-form" style="display:inline">
+                            <h:commandLink value="Logout (#{authBean.currentUsername})"
+                                          action="#{authBean.logout}"
+                                          styleClass="nav-link nav-link-logout"/>
+                        </h:form>
+                    </h:panelGroup>
+                    <h:panelGroup rendered="#{not authBean.loggedIn}" layout="inline">
+                        <h:link outcome="login" value="Login" styleClass="nav-link"/>
+                    </h:panelGroup>
+                </nav>
+            </div>
+            <div class="user-session-bar">
+                <h:panelGroup rendered="#{userSessionBean.isUserSelected()}">
+                    <span class="user-session-label">Current User:</span>
+                    <strong class="user-session-name"><h:outputText value="#{userSessionBean.selectedUsername}"/></strong>
+                    <h:link outcome="users" value="Change" styleClass="user-session-link"/>
+                </h:panelGroup>
+                <h:panelGroup rendered="#{not userSessionBean.isUserSelected()}">
+                    <h:link outcome="users" value="Select User" styleClass="user-session-link"/>
+                </h:panelGroup>
+            </div>
+        </header>
+        <main class="app-main">
+            <ui:insert name="content"/>
+        </main>
+        <footer class="app-footer">
+            <p>World Cup Predictor &#8212; Clean Architecture with Jakarta Faces (JSF)</p>
+        </footer>
+    </div>
+</h:body>
+</html>
