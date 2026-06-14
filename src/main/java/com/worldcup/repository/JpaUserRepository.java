@@ -39,19 +39,20 @@ public class JpaUserRepository implements UserRepository {
 
         System.out.println("QUERY USERNAME = [" + username + "]");
 
-        List<User> users = em.createQuery(
-                        "SELECT u FROM User u", User.class)
-                .getResultList();
 
-        System.out.println("TOTAL USERS = " + users.size());
-
-        users.forEach(u ->
-                System.out.println("FOUND USER = " + u.getUsername()));
 
         return em.createQuery(
                         "SELECT u FROM User u WHERE u.username = :username",
                         User.class)
                 .setParameter("username", username)
+                .getResultStream()
+                .findFirst();
+    }
+
+    @Override
+    public Optional<User> findByAdUsername(String adUsername) {
+        return em.createQuery("SELECT u FROM User u WHERE u.adUsername = :adUsername", User.class)
+                .setParameter("adUsername", adUsername)
                 .getResultStream()
                 .findFirst();
     }
@@ -70,10 +71,12 @@ public class JpaUserRepository implements UserRepository {
     /**
      * Find all approved users
      */
+    /* DEPRECATED - Replaced by Whitelist
     public List<User> findAllApproved() {
         return em.createQuery("SELECT u FROM User u WHERE u.isApproved = true ORDER BY u.username", User.class)
                 .getResultList();
     }
+    */
 
     /**
      * Find all admin users
@@ -86,10 +89,12 @@ public class JpaUserRepository implements UserRepository {
     /**
      * Find all pending approval users
      */
+    /* DEPRECATED - Replaced by Whitelist
     public List<User> findPendingApproval() {
         return em.createQuery("SELECT u FROM User u WHERE u.isApproved = false ORDER BY u.createdAt", User.class)
                 .getResultList();
     }
+    */
 
     /**
      * Delete a user by ID

@@ -192,15 +192,18 @@ public class MatchBean implements Serializable {
             return "";
         }
         if (match.isFinished()) {
-            return "Finished";
+            if (match.canEditResult()) {
+                return "Result entered. Editable within " + Match.RESULT_WINDOW_HOURS + "h";
+            }
+            return "Finished & Locked";
         }
         if (match.canRecordResult()) {
-            return "In progress — enter result within " + Match.RESULT_WINDOW_HOURS + "h after kickoff";
+            return "In progress — await final whistle to enter result";
         }
         if (match.hasStarted()) {
-            return "Result window closed";
+            return "Match started";
         }
-        return "Scheduled (result entry within " + Match.RESULT_WINDOW_HOURS + "h after kickoff)";
+        return "Scheduled";
     }
 
     public String getStatusBarClass(Match match) {
@@ -208,13 +211,16 @@ public class MatchBean implements Serializable {
             return "match-dash-status";
         }
         if (match.isFinished()) {
+            if (match.canEditResult()) {
+                return "match-dash-status match-dash-status-live";
+            }
             return "match-dash-status match-dash-status-finished";
         }
         if (match.canRecordResult()) {
             return "match-dash-status match-dash-status-live";
         }
         if (match.hasStarted()) {
-            return "match-dash-status match-dash-status-closed";
+            return "match-dash-status match-dash-status-live";
         }
         return "match-dash-status match-dash-status-scheduled";
     }

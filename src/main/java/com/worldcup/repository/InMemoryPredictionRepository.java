@@ -1,19 +1,14 @@
 package com.worldcup.repository;
 
-import com.worldcup.model.Prediction;
-import jakarta.enterprise.context.ApplicationScoped;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
 
 /**
  * Thread-safe in-memory Prediction store.
  */
+/* DEPRECATED - Consolidating to JPA-only. Keep file for reference.
 @ApplicationScoped
 public class InMemoryPredictionRepository implements PredictionRepository {
+
 
     private final ConcurrentHashMap<Long, Prediction> store = new ConcurrentHashMap<>();
     private final AtomicLong idGenerator = new AtomicLong(1);
@@ -49,3 +44,4 @@ public class InMemoryPredictionRepository implements PredictionRepository {
         return store.values().stream().collect(Collectors.toList());
     }
 }
+*/

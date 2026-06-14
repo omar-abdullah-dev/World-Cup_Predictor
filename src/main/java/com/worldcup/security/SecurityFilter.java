@@ -51,24 +51,25 @@ public class SecurityFilter implements Filter {
             || requestURI.endsWith("/")
             || requestURI.contains("/error");
 
-        // Check authentication via session attribute set by AuthBean
+        // Check authentication via session and CDI
         HttpSession session = httpRequest.getSession(false);
-        boolean isAuthenticated = false;
         if (session != null) {
-            Object authBeanAttr = session.getAttribute("authBean");
-            if (authBeanAttr == null) {
-                // Try to look up via CDI BeanManager through JNDI if available
-                // Fall back to trusting index and login pages
-                isAuthenticated = isPublicPage;
-            } else {
-                // AuthBean is stored in session; check loggedIn flag via toString or instanceof
-                try {
-                    com.worldcup.bean.AuthBean ab = (com.worldcup.bean.AuthBean) authBeanAttr;
-                    isAuthenticated = ab.isLoggedIn();
-                } catch (ClassCastException e) {
-                    isAuthenticated = false;
-                }
+            long maxAge = 24L * 60L * 60L * 1000L; // 24 hours
+            if (System.currentTimeMillis() - session.getCreationTime() > maxAge) {
+                session.invalidate();
+                LOGGER.log(Level.INFO, "Session expired (24h limit) for: {0}", requestURI);
+                httpResponse.sendRedirect(httpRequest.getContextPath() + "/login.xhtml");
+                return;
             }
+        }
+
+        boolean isAuthenticated = false;
+        com.worldcup.bean.AuthBean ab = null;
+        try {
+            ab = jakarta.enterprise.inject.spi.CDI.current().select(com.worldcup.bean.AuthBean.class).get();
+            isAuthenticated = ab != null && ab.isLoggedIn();
+        } catch (Exception e) {
+            LOGGER.log(Level.FINE, "Failed to resolve AuthBean via CDI", e);
         }
 
         // Allow index.xhtml as landing page (it shows login prompt if not authenticated)
@@ -81,6 +82,15 @@ public class SecurityFilter implements Filter {
             LOGGER.log(Level.INFO, "Unauthenticated access attempt to: {0}", requestURI);
             httpResponse.sendRedirect(httpRequest.getContextPath() + "/login.xhtml");
             return;
+        }
+
+        // Enforce Admin role on admin pages
+        if (requestURI.contains("admin-") || requestURI.contains("/admin/")) {
+            if (ab == null || !ab.isAdmin()) {
+                LOGGER.log(Level.WARNING, "Unauthorized admin access attempt to: {0}", requestURI);
+                httpResponse.sendError(HttpServletResponse.SC_FORBIDDEN, "Access Denied: Admin role required");
+                return;
+            }
         }
 
         chain.doFilter(request, response);

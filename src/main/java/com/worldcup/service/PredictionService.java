@@ -47,7 +47,7 @@ public class PredictionService {
      */
     public Prediction submitPrediction(Long userId, Long matchId,
                                        int predictedHomeScore, int predictedAwayScore) {
-        User user = userRepository.findById(userId)
+        userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
 
         Match match = matchService.getMatch(matchId);
@@ -56,9 +56,23 @@ public class PredictionService {
             throw new IllegalArgumentException(
                 "Cannot predict a finished match.");
 
+        /* DEPRECATED - replaced by round and deadline checks
         if (!match.isPredictionOpen())
             throw new IllegalArgumentException(
                 "Cannot submit or change a prediction after the match has started.");
+        */
+
+        if (match.getRound() != null && !match.getRound().isPredictionsAllowed()) {
+            throw new IllegalArgumentException("Predictions are locked for this round.");
+        }
+        
+        if (match.getPredictionDeadline() != null && java.time.LocalDateTime.now().isAfter(match.getPredictionDeadline())) {
+            throw new IllegalArgumentException("Prediction deadline has passed for this match.");
+        }
+
+        if (match.hasStarted()) {
+            throw new IllegalArgumentException("Cannot submit or change a prediction after the match has started.");
+        }
 
         if (predictedHomeScore < 0 || predictedAwayScore < 0)
             throw new IllegalArgumentException("Predicted scores cannot be negative.");

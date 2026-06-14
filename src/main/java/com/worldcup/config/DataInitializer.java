@@ -26,6 +26,7 @@ public class DataInitializer {
 
     @Inject private UserService userService;
     @Inject private MatchService matchService;
+    @Inject private com.worldcup.service.WhitelistService whitelistService;
 
     protected DataInitializer() {}
 
@@ -43,20 +44,23 @@ public class DataInitializer {
         String adminUsername = "admin";
         String adminPassword = "AdminPass123";
         try {
+            User admin;
             // Check if already exists
             try {
-                return userService.findByUsername(adminUsername);
-            } catch (IllegalArgumentException ignored) {}
+                admin = userService.findByUsername(adminUsername);
+            } catch (IllegalArgumentException ignored) {
+                // Register the admin user first
+                admin = userService.registerUser(adminUsername, adminPassword);
+                admin.setRole(Role.ADMIN);
+                userService.updateUser(admin);
+                LOG.info("Created ADMIN user: " + adminUsername + " (password: " + adminPassword + ")");
+            }
+            
+            // Add to whitelist if not already present
+            if (!whitelistService.isUserWhitelisted(adminUsername)) {
+                whitelistService.addEntry(admin, adminUsername, "Admin User", "admin@company.com");
+            }
 
-            // Register the admin user first (gets NORMAL_USER, unapproved)
-            User admin = userService.registerUser(adminUsername, adminPassword);
-
-            // Directly set role and approval without requiring an existing admin
-            admin.setRole(Role.ADMIN);
-            admin.setApproved(true);
-            userService.updateUser(admin);
-
-            LOG.info("Created ADMIN user: " + adminUsername + " (password: " + adminPassword + ")");
             return admin;
         } catch (Exception e) {
             LOG.warning("Failed to create ADMIN user: " + e.getMessage());
@@ -69,17 +73,22 @@ public class DataInitializer {
         for (String name : new String[]{
                 "MessiFan2026", "RonaldoCR7", "NeymarJr11",
                 "MbappeStar", "Modric10", "Lewandowski9",
-                "ViniciusJr", "Bellingham22"}) {
+                "ViniciusJr", "Bellingham22", "qli399@Company.com"}) {
             try {
                 // Check if already exists
                 try {
                     userService.findByUsername(name);
-                    continue; // skip if exists
-                } catch (IllegalArgumentException ignored) {}
+                } catch (IllegalArgumentException ignored) {
+                    userService.registerUser(name, userPassword);
+                    LOG.info("Created user: " + name);
+                }
 
-                User user = userService.registerUser(name, userPassword);
-                userService.approveUser(adminUser, user.getId());
-                LOG.info("Created user: " + name + " (approved=true)");
+                // Add to whitelist if not already present
+                if (!whitelistService.isUserWhitelisted(name)) {
+                    String email = name.contains("@") ? name : name + "@company.com";
+                    whitelistService.addEntry(adminUser, name, name + " Employee", email);
+                    LOG.info("Added user " + name + " to whitelist");
+                }
             } catch (Exception e) {
                 LOG.warning("Skipped user '" + name + "': " + e.getMessage());
             }

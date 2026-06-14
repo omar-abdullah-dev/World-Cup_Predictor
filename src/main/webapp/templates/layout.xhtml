@@ -33,6 +33,16 @@
                             styleClass="nav-link#{navBean.isActive('leaderboard') ? ' active' : ''}"/>
                     <h:link outcome="users" value="Users"
                             styleClass="nav-link#{navBean.isActive('users') ? ' active' : ''}"/>
+                    <h:panelGroup rendered="#{authBean.admin}" layout="inline">
+                        <h:link outcome="admin-whitelist" value="Admin Whitelist"
+                                styleClass="nav-link#{navBean.isActive('admin-whitelist') ? ' active' : ''}"/>
+                        <h:link outcome="admin-rounds" value="Admin Rounds"
+                                styleClass="nav-link#{navBean.isActive('admin-rounds') ? ' active' : ''}"/>
+                        <h:link outcome="admin-groups" value="Admin Groups"
+                                styleClass="nav-link#{navBean.isActive('admin-groups') ? ' active' : ''}"/>
+                        <h:link outcome="admin-matches" value="Admin Matches"
+                                styleClass="nav-link#{navBean.isActive('admin-matches') ? ' active' : ''}"/>
+                    </h:panelGroup>
                     <h:panelGroup rendered="#{authBean.loggedIn}" layout="inline">
                         <h:form styleClass="nav-logout-form" style="display:inline">
                             <h:commandLink value="Logout (#{authBean.currentUsername})"
@@ -44,16 +54,6 @@
                         <h:link outcome="login" value="Login" styleClass="nav-link"/>
                     </h:panelGroup>
                 </nav>
-            </div>
-            <div class="user-session-bar">
-                <h:panelGroup rendered="#{userSessionBean.isUserSelected()}">
-                    <span class="user-session-label">Current User:</span>
-                    <strong class="user-session-name"><h:outputText value="#{userSessionBean.selectedUsername}"/></strong>
-                    <h:link outcome="users" value="Change" styleClass="user-session-link"/>
-                </h:panelGroup>
-                <h:panelGroup rendered="#{not userSessionBean.isUserSelected()}">
-                    <h:link outcome="users" value="Select User" styleClass="user-session-link"/>
-                </h:panelGroup>
             </div>
         </header>
         <main class="app-main">

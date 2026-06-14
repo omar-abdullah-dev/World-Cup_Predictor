@@ -1,7 +1,6 @@
 package com.worldcup.repository;
 
 import com.worldcup.model.Match;
-import jakarta.enterprise.inject.Alternative;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -12,9 +11,7 @@ import java.util.Optional;
 
 /**
  * JPA/Hibernate implementation of MatchRepository.
- * Marked @Alternative; activate in beans.xml if PostgreSQL is configured.
  */
-@Alternative
 @ApplicationScoped
 @Transactional
 public class JpaMatchRepository implements MatchRepository {
@@ -41,6 +38,20 @@ public class JpaMatchRepository implements MatchRepository {
     @Override
     public List<Match> findAll() {
         return em.createQuery("SELECT m FROM Match m ORDER BY m.kickoffDate", Match.class).getResultList();
+    }
+
+    @Override
+    public List<Match> findByRound(Long roundId) {
+        return em.createQuery("SELECT m FROM Match m WHERE m.round.id = :roundId ORDER BY m.kickoffDate", Match.class)
+                .setParameter("roundId", roundId)
+                .getResultList();
+    }
+
+    @Override
+    public List<Match> findByGroup(Long groupId) {
+        return em.createQuery("SELECT m FROM Match m WHERE m.group.id = :groupId ORDER BY m.kickoffDate", Match.class)
+                .setParameter("groupId", groupId)
+                .getResultList();
     }
 
     @Override

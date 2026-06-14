@@ -27,7 +27,7 @@ public class GroupDetailsBean implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    @Inject private GroupsBean groupsBean;
+
     @Inject private MatchService matchService;
     @Inject private PredictionService predictionService;
     @Inject private UserSessionBean userSessionBean;
@@ -192,32 +192,13 @@ public class GroupDetailsBean implements Serializable {
             return;
         }
 
-        List<String> teams = groupsBean.getTeamsByGroup(group);
-        if (teams.isEmpty()) {
-            return;
-        }
-
         List<Match> matches = matchService.getAllMatches().stream()
-                .filter(match -> isMatchInGroup(match, teams))
+                .filter(match -> match.getGroup() != null && match.getGroup().getName().equalsIgnoreCase(group))
                 .collect(Collectors.toList());
 
         for (Match match : matches) {
             matchRows.add(new MatchRow(match));
         }
-    }
-
-    private boolean isMatchInGroup(Match match, List<String> teamDisplayNames) {
-        String home = groupsBean.normalizeTeamName(match.getHomeTeam()).toLowerCase(Locale.ROOT);
-        String away = groupsBean.normalizeTeamName(match.getAwayTeam()).toLowerCase(Locale.ROOT);
-
-        return teamDisplayNames.stream()
-                .map(groupsBean::normalizeTeamName)
-                .map(team -> team.toLowerCase(Locale.ROOT))
-                .anyMatch(team -> team.equals(home))
-            && teamDisplayNames.stream()
-                .map(groupsBean::normalizeTeamName)
-                .map(team -> team.toLowerCase(Locale.ROOT))
-                .anyMatch(team -> team.equals(away));
     }
 
     /**

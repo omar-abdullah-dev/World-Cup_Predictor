@@ -26,23 +26,10 @@
 
         <div class="page-header">
             <h2>&#127919; Predictions</h2>
-            <p>Select your name then predict each match</p>
+            <p>Predict each match to earn points!</p>
         </div>
 
-        <h:form id="userSelectionForm">
-            <div class="user-select-card">
-                <span class="user-select-label">&#128100; Who are you?</span>
-                <h:selectOneMenu id="globalUserId"
-                                 value="#{predictionBean.userId}"
-                                 styleClass="user-select-menu">
-                    <f:selectItem itemLabel="-- Select your name --" itemValue=""/>
-                    <f:selectItems value="#{predictionBean.users}" var="u"
-                                   itemLabel="#{u.username}" itemValue="#{u.id}"/>
-                    <f:ajax listener="#{predictionBean.onUserChange}"
-                            render=":messagesPanel :upcomingMatchesGroup :finishedMatchesPanel"/>
-                </h:selectOneMenu>
-            </div>
-        </h:form>
+
 
         <h:panelGroup id="upcomingMatchesGroup" layout="block">
             <h:panelGroup rendered="#{empty predictionBean.upcomingRows}">
@@ -215,7 +202,7 @@
                                 <span class="pred-hint pred-hint-muted">No prediction submitted</span>
                             </h:panelGroup>
                             <h:panelGroup rendered="#{predictionBean.userId == null}">
-                                <span class="pred-hint pred-hint-muted">Select a user to see your history</span>
+                                <span class="pred-hint pred-hint-muted">Login to see your history</span>
                             </h:panelGroup>
                             <span class="pred-status-finished">Finished</span>
                         </div>

@@ -1,3 +1,4 @@
+<!-- DEPRECATED: Replaced by Active Directory integration -->
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
         "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -164,64 +165,14 @@
         <h:form id="registerForm">
             <!-- Info box -->
             <div class="info-box">
-                <strong>📋 Important:</strong><br/>
-                After registration, your account will be pending admin approval.
-                You'll receive confirmation once an administrator approves your access.
+                <strong>📋 Registration Disabled:</strong><br/>
+                Registration is now handled via Active Directory. 
+                Please contact an administrator to be added to the Whitelist.
             </div>
-
-            <!-- Error message -->
-            <h:panelGroup rendered="#{not empty registrationBean.errorMessage}">
-                <div class="message error">
-                    <h:outputText value="#{registrationBean.errorMessage}"/>
-                </div>
-            </h:panelGroup>
-
-            <!-- Success message -->
-            <h:panelGroup rendered="#{not empty registrationBean.successMessage}">
-                <div class="message success">
-                    <h:outputText value="#{registrationBean.successMessage}"/>
-                </div>
-            </h:panelGroup>
-
-            <!-- Username field -->
-            <div class="form-group">
-                <h:outputLabel for="username" value="Username"/>
-                <h:inputText id="username" 
-                             value="#{registrationBean.username}" 
-                             required="true"
-                             placeholder="Choose your username (3-20 characters)"/>
-                <div class="password-requirements">
-                    • Must be unique<br/>
-                    • 3-20 characters
-                </div>
+            
+            <div style="text-align: center; margin-top: 20px;">
+                <h:link outcome="/login" value="Return to Login" styleClass="register-button" style="display:inline-block; text-decoration:none; text-align:center; box-sizing:border-box;"/>
             </div>
-
-            <!-- Password field -->
-            <div class="form-group">
-                <h:outputLabel for="password" value="Password"/>
-                <h:inputSecret id="password" 
-                              value="#{registrationBean.password}" 
-                              required="true"
-                              placeholder="Create a strong password"/>
-                <div class="password-requirements">
-                    • At least 8 characters<br/>
-                    • Mix of uppercase, lowercase, numbers
-                </div>
-            </div>
-
-            <!-- Confirm password field -->
-            <div class="form-group">
-                <h:outputLabel for="confirmPassword" value="Confirm Password"/>
-                <h:inputSecret id="confirmPassword" 
-                              value="#{registrationBean.confirmPassword}" 
-                              required="true"
-                              placeholder="Re-enter your password"/>
-            </div>
-
-            <!-- Register button -->
-            <h:commandButton value="✅ Create Account" 
-                            action="#{registrationBean.register()}"
-                            styleClass="register-button"/>
         </h:form>
 
         <!-- Footer with login link -->

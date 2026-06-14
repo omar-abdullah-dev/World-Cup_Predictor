@@ -1,7 +1,6 @@
 package com.worldcup.repository;
 
 import com.worldcup.model.Prediction;
-import jakarta.enterprise.inject.Alternative;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -12,9 +11,7 @@ import java.util.Optional;
 
 /**
  * JPA/Hibernate implementation of PredictionRepository.
- * Marked @Alternative; activate in beans.xml if PostgreSQL is configured.
  */
-@Alternative
 @ApplicationScoped
 @Transactional
 public class JpaPredictionRepository implements PredictionRepository {

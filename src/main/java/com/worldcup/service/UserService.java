@@ -115,6 +115,58 @@ public class UserService {
     }
 
     /**
+     * Synchronizes a user from Active Directory.
+     * If the user doesn't exist by AD username, it creates them.
+     */
+    public User syncAdUser(String adUsername, String displayName, String email, String employeeId) {
+        if (adUsername == null || adUsername.trim().isEmpty()) {
+            throw new IllegalArgumentException("AD Username cannot be null or empty.");
+        }
+        
+        java.util.Optional<User> existing = userRepository.findByAdUsername(adUsername.trim());
+        if (!existing.isPresent()) {
+            existing = userRepository.findByUsername(adUsername.trim());
+        }
+
+        if (existing.isPresent()) {
+            User user = existing.get();
+            boolean changed = false;
+            if (user.getAdUsername() == null) {
+                user.setAdUsername(adUsername.trim());
+                changed = true;
+            }
+            if (displayName != null && !displayName.equals(user.getDisplayName())) {
+                user.setDisplayName(displayName);
+                changed = true;
+            }
+            if (email != null && !email.equals(user.getEmail())) {
+                user.setEmail(email);
+                changed = true;
+            }
+            if (employeeId != null && !employeeId.equals(user.getEmployeeId())) {
+                user.setEmployeeId(employeeId);
+                changed = true;
+            }
+            if (changed) {
+                return userRepository.update(user);
+            }
+            return user;
+        }
+
+        // Create new AD user
+        User newUser = new User();
+        newUser.setUsername(adUsername.trim()); // Username defaults to adUsername
+        newUser.setAdUsername(adUsername.trim());
+        newUser.setDisplayName(displayName);
+        newUser.setEmail(email);
+        newUser.setEmployeeId(employeeId);
+        newUser.setRole(Role.NORMAL_USER);
+        // AD users don't have local password hash
+        
+        return userRepository.save(newUser);
+    }
+
+    /**
      * Retrieves all users in the system (admin-only operation).
      * 
      * @return list of all users
@@ -144,7 +196,9 @@ public class UserService {
      */
     public List<User> getLeaderboard() {
         return userRepository.findAll().stream()
+                /* DEPRECATED - isApproved no longer exists, all users are valid if in DB
                 .filter(User::isApproved)  // Only approved users
+                */
                 .sorted(Comparator.comparingInt(User::getTotalPoints).reversed()
                         .thenComparing(User::getUsername))
                 .collect(Collectors.toList());
@@ -159,6 +213,7 @@ public class UserService {
      * @return approved User
      * @throws SecurityException if caller is not an admin
      */
+    /* DEPRECATED - Replaced by Whitelist
     public User approveUser(User adminUser, Long userIdToApprove) {
         SecurityService.assertAdmin(adminUser, "approve user");
         
@@ -166,6 +221,7 @@ public class UserService {
         user.setApproved(true);
         return userRepository.update(user);
     }
+    */
 
     /**
      * Denies/revokes system access for a user (ADMIN-ONLY).
@@ -175,6 +231,7 @@ public class UserService {
      * @return updated User (not approved)
      * @throws SecurityException if caller is not an admin
      */
+    /* DEPRECATED - Replaced by Whitelist
     public User denyUser(User adminUser, Long userIdToDeny) {
         SecurityService.assertAdmin(adminUser, "deny user access");
         
@@ -182,6 +239,7 @@ public class UserService {
         user.setApproved(false);
         return userRepository.update(user);
     }
+    */
 
     /**
      * Assigns an admin role to a user (ADMIN-ONLY).
@@ -222,6 +280,7 @@ public class UserService {
      * @return list of unapproved users
      * @throws SecurityException if caller is not an admin
      */
+    /* DEPRECATED - Replaced by Whitelist
     public List<User> getUnapprovedUsers(User adminUser) {
         SecurityService.assertAdmin(adminUser, "view unapproved users");
         
@@ -229,6 +288,7 @@ public class UserService {
                 .filter(u -> !u.isApproved())
                 .collect(Collectors.toList());
     }
+    */
 
     /**
      * Changes a user's password (user themselves, or admin).

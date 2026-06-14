@@ -2,24 +2,18 @@ package com.worldcup.bean;
 
 import com.worldcup.model.User;
 import com.worldcup.service.UserService;
-import com.worldcup.security.SecurityException;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 @Named
 @RequestScoped
 public class UserBean {
 
-    private static final Logger LOGGER = Logger.getLogger(UserBean.class.getName());
-
     private String username;
     private List<User> users;
-    private List<User> pendingUsers;
     private String errorMessage;
     private String successMessage;
 
@@ -45,11 +39,11 @@ public class UserBean {
         return users;
     }
 
+    /* DEPRECATED - Registration flow removed
     public List<User> getPendingUsers() {
         try {
-            // Only fetch pending users if current session user is admin
             if (authBean != null && authBean.isAdmin()) {
-                pendingUsers = userService.getUnapprovedUsers(authBean.getUser());
+                // pendingUsers = userService.getUnapprovedUsers(authBean.getUser());
             } else {
                 pendingUsers = List.of();
             }
@@ -64,7 +58,7 @@ public class UserBean {
         errorMessage = null;
         successMessage = null;
         try {
-            userService.approveUser(authBean.getUser(), userId);
+            // userService.approveUser(authBean.getUser(), userId);
             successMessage = "User approved.";
         } catch (Exception e) {
             errorMessage = e.getMessage();
@@ -76,13 +70,14 @@ public class UserBean {
         errorMessage = null;
         successMessage = null;
         try {
-            userService.denyUser(authBean.getUser(), userId);
+            // userService.denyUser(authBean.getUser(), userId);
             successMessage = "User denied access.";
         } catch (Exception e) {
             errorMessage = e.getMessage();
         }
         return null;
     }
+    */
 
     public String promoteToAdmin(Long userId) {
         errorMessage = null;

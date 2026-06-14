@@ -1,19 +1,14 @@
 package com.worldcup.repository;
 
-import com.worldcup.model.Match;
-import jakarta.enterprise.context.ApplicationScoped;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
 
 /**
  * Thread-safe in-memory Match store.
  */
+/* DEPRECATED - Consolidating to JPA-only. Keep file for reference.
 @ApplicationScoped
 public class InMemoryMatchRepository implements MatchRepository {
+
 
     private final ConcurrentHashMap<Long, Match> store = new ConcurrentHashMap<>();
     private final AtomicLong idGenerator = new AtomicLong(1);
@@ -48,3 +43,4 @@ public class InMemoryMatchRepository implements MatchRepository {
         store.remove(id);
     }
 }
+*/

@@ -103,6 +103,8 @@ public class MatchService {
             throw new IllegalArgumentException("Scores cannot be negative.");
 
         Match match = getMatch(matchId);
+        
+        /* DEPRECATED checks based on kickoff time
         if (match.isFinished())
             throw new IllegalArgumentException(
                 "Result already recorded for match ID: " + matchId);
@@ -113,6 +115,14 @@ public class MatchService {
             throw new IllegalArgumentException(
                 "Result can only be recorded within " + Match.RESULT_WINDOW_HOURS
                         + " hours after kickoff.");
+        */
+
+        if (match.getStatus() == MatchStatus.SCHEDULED && !match.hasStarted()) {
+            throw new IllegalArgumentException("Cannot record result before the match has started.");
+        }
+        if (match.isResultLocked()) {
+            throw new IllegalArgumentException("Result is locked and cannot be edited.");
+        }
 
         match.finish(homeScore, awayScore);
         matchRepository.update(match);
@@ -159,8 +169,11 @@ public class MatchService {
             throw new IllegalArgumentException("Scores cannot be negative.");
 
         Match match = getMatch(matchId);
+        
+        /* DEPRECATED
         if (match.isFinished())
             throw new IllegalArgumentException("Result already recorded for match ID: " + matchId);
+        */
 
         match.finish(homeScore, awayScore);
         matchRepository.update(match);

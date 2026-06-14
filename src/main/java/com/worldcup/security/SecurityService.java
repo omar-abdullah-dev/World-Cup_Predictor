@@ -38,9 +38,11 @@ public class SecurityService {
         if (user == null) {
             throw SecurityException.notAuthenticated();
         }
+        /* DEPRECATED - Replaced by Whitelist
         if (!user.isApproved()) {
             throw SecurityException.userNotApproved(user.getUsername());
         }
+        */
     }
 
     /**
@@ -73,7 +75,7 @@ public class SecurityService {
      * @return true if user is not null and approved, false otherwise
      */
     public static boolean isAuthenticated(User user) {
-        return user != null && user.isApproved();
+        return user != null; // && user.isApproved(); /* DEPRECATED */
     }
 
     /**
@@ -85,9 +87,11 @@ public class SecurityService {
      * @return true if user can perform operation, false otherwise
      */
     public static boolean hasPermission(User user, boolean requireAdmin) {
-        if (user == null || !user.isApproved()) {
+        if (user == null) {
             return false;
         }
+        // if (!user.isApproved()) return false; /* DEPRECATED */
+        
         if (requireAdmin) {
             return user.isAdmin();
         }

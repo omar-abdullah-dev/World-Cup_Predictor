@@ -115,7 +115,16 @@ public class AuthBean implements Serializable {
      * @return true if user is authenticated and approved, false otherwise
      */
     public boolean isLoggedIn() {
-        return user != null && user.isApproved();
+        if (user == null) return false;
+        
+        // Dynamically check against Whitelist
+        User activeUser = authenticationService.validateActiveSession(user.getId());
+        if (activeUser == null) {
+            this.user = null;
+            return false;
+        }
+        this.user = activeUser;
+        return true;
     }
 
     /**

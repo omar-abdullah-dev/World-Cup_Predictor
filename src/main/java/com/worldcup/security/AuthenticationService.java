@@ -1,6 +1,6 @@
 package com.worldcup.security;
 
-import com.worldcup.model.User;
+import com.worldcup.model.*;
 import com.worldcup.service.UserService;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -16,12 +16,14 @@ import jakarta.inject.Inject;
 public class AuthenticationService {
 
     private UserService userService;
+    private AuthenticationProvider authenticationProvider;
 
     protected AuthenticationService() {}
 
     @Inject
-    public AuthenticationService(UserService userService) {
+    public AuthenticationService(UserService userService, AuthenticationProvider authenticationProvider) {
         this.userService = userService;
+        this.authenticationProvider = authenticationProvider;
     }
 
     /**
@@ -46,23 +48,21 @@ public class AuthenticationService {
             throw SecurityException.authenticationFailed("Password cannot be empty");
         }
 
-        // Look up user by username
-        User user = userService.findByUsername(username.trim());
-        if (user == null) {
-            throw SecurityException.authenticationFailed("User not found");
+        /* DEPRECATED - AD is the source of truth; no manual approval or whitelist required.
+        // Check whitelist first
+        if (!whitelistService.isUserWhitelisted(username.trim())) {
+            throw SecurityException.userNotApproved(username.trim());
+        }
+        */
+
+        // Authenticate via AD (or Mock)
+        AdUserDetails adUser = authenticationProvider.authenticate(username.trim(), plainPassword);
+        if (adUser == null) {
+            throw SecurityException.authenticationFailed("Invalid username or password");
         }
 
-        // Verify password
-        if (!PasswordService.verifyPassword(plainPassword, user.getPasswordHash())) {
-            throw SecurityException.authenticationFailed("Invalid password");
-        }
-
-        // Check if approved
-        if (!user.isApproved()) {
-            throw SecurityException.userNotApproved(username);
-        }
-
-        return user;
+        // Sync AD info with local database
+        return userService.syncAdUser(adUser.getAdUsername(), adUser.getDisplayName(), adUser.getEmail(), adUser.getEmployeeId());
     }
 
     /**
@@ -75,9 +75,12 @@ public class AuthenticationService {
     public User validateActiveSession(Long userId) {
         try {
             User user = userService.getUser(userId);
-            if (user != null && user.isApproved()) {
+            return user;
+            /* DEPRECATED - Whitelist no longer used for session validation
+            if (user != null && whitelistService.isUserWhitelisted(user.getAdUsername())) {
                 return user;
             }
+            */
         } catch (Exception e) {
             // User not found or error during lookup
         }

@@ -38,12 +38,12 @@ public class PredictionBean implements Serializable {
     @Inject private PredictionService predictionService;
     @Inject private UserService userService;
     @Inject private MatchService matchService;
-    @Inject private UserSessionBean userSessionBean;
+    @Inject private AuthBean authBean;
 
     @PostConstruct
     public void init() {
-        if (userSessionBean.isUserSelected()) {
-            userId = userSessionBean.getSelectedUserId();
+        if (authBean != null && authBean.isLoggedIn()) {
+            userId = authBean.getCurrentUserId();
         }
         refreshUpcomingRows();
     }
@@ -58,7 +58,7 @@ public class PredictionBean implements Serializable {
 
         Long activeUserId = resolveActiveUserId();
         if (activeUserId == null) {
-            errorMessage = "Please select a user first.";
+            errorMessage = "Please login first to submit predictions.";
             return null;
         }
         if (matchId == null) {
@@ -127,13 +127,10 @@ public class PredictionBean implements Serializable {
     }
 
     private Long resolveActiveUserId() {
-        if (userId != null) {
-            return userId;
+        if (authBean != null && authBean.isLoggedIn()) {
+            return authBean.getCurrentUserId();
         }
-        if (userSessionBean.isUserSelected()) {
-            return userSessionBean.getSelectedUserId();
-        }
-        return null;
+        return userId;
     }
 
     public List<User> getUsers() {
