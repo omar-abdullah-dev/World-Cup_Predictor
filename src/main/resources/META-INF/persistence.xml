@@ -13,6 +13,10 @@
         <class>com.worldcup.model.User</class>
         <class>com.worldcup.model.Match</class>
         <class>com.worldcup.model.Prediction</class>
+        <class>com.worldcup.model.Team</class>
+        <class>com.worldcup.model.Group</class>
+        <class>com.worldcup.model.TournamentRound</class>
+        <class>com.worldcup.model.WhitelistEntry</class>
 
         <properties>
             <!-- Hibernate dialect for PostgreSQL -->

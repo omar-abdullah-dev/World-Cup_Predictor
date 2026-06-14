@@ -165,10 +165,22 @@ public class Match implements Serializable {
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
-    public String getHomeTeam() { return homeTeam; }
+    public String getHomeTeam() {
+        if (homeTeam != null && !homeTeam.isBlank()) {
+            return homeTeam;
+        }
+        return homeTeamEntity != null ? homeTeamEntity.getName() : "";
+    }
+
     public void setHomeTeam(String homeTeam) { this.homeTeam = homeTeam; }
 
-    public String getAwayTeam() { return awayTeam; }
+    public String getAwayTeam() {
+        if (awayTeam != null && !awayTeam.isBlank()) {
+            return awayTeam;
+        }
+        return awayTeamEntity != null ? awayTeamEntity.getName() : "";
+    }
+
     public void setAwayTeam(String awayTeam) { this.awayTeam = awayTeam; }
 
     public LocalDateTime getKickoffDate() { return kickoffDate; }

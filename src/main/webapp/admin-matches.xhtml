@@ -50,117 +50,107 @@
             <h3>Tournament Fixtures</h3>
         </div>
 
-        <h:form id="matches-list-form" styleClass="match-dash-list">
-            <h:panelGroup rendered="#{empty adminMatchBean.matches}">
+        <div class="match-dash-list">
+            <h:panelGroup rendered="#{empty adminMatchBean.matchRows}">
                 <div class="card" style="text-align: center;">
                     <p class="form-hint">No matches scheduled yet.</p>
                 </div>
             </h:panelGroup>
 
-            <ui:repeat value="#{adminMatchBean.matches}" var="match">
-                <div class="match-dash-item">
+            <ui:repeat value="#{adminMatchBean.matchRows}" var="row">
+                <h:form styleClass="match-dash-item">
                     <!-- Top header of the match card -->
                     <div class="match-dash-item-top">
                         <div>
-                            <span class="match-stage">Match ##{match.id}</span>
+                            <span class="match-stage">Match ##{row.match.id}</span>
                             <span style="margin: 0 8px; color: #9ca3af;">|</span>
                             <span class="match-kickoff">
-                                <h:outputText value="#{match.kickoffDate}">
+                                <h:outputText value="#{row.match.kickoffDate}">
                                     <f:convertDateTime type="localDateTime" pattern="yyyy-MM-dd HH:mm"/>
                                 </h:outputText>
                             </span>
                         </div>
                         <div class="match-dash-item-meta">
-                            <!-- Delete Match (Rendered only if match hasn't started yet) -->
-                            <h:commandLink value="Delete Fixture" action="#{adminMatchBean.deleteMatch(match.id)}"
+                            <h:commandLink value="Delete Fixture" action="#{adminMatchBean.deleteMatch(row.match.id)}"
                                            onclick="return confirm('Are you sure you want to delete this match?');"
-                                           rendered="#{not match.hasStarted() and match.status == 'SCHEDULED'}"
-                                           styleClass="match-dash-delete-link">
-                                <f:ajax render="@form"/>
-                            </h:commandLink>
+                                           rendered="#{not row.match.hasStarted() and row.match.status == 'SCHEDULED'}"
+                                           styleClass="match-dash-delete-link"/>
                         </div>
                     </div>
 
                     <!-- Middle content of the match card -->
                     <div class="match-dash-item-body">
-                        <!-- Home Team -->
                         <div class="pred-match-team" style="text-align: right;">
                             <span class="match-team-name" style="margin-right: 15px; font-size: 1.1em;">
-                                <h:outputText value="#{match.homeTeam}"/>
+                                <h:outputText value="#{row.match.homeTeam}"/>
                             </span>
                             <span class="team-initials-badge" style="display: inline-flex; vertical-align: middle; margin: 0;">
-                                <h:outputText value="#{adminMatchBean.getTeamInitials(match.homeTeam)}"/>
+                                <h:outputText value="#{adminMatchBean.getTeamInitials(row.match.homeTeam)}"/>
                             </span>
                         </div>
 
-                        <!-- Score Box / Scoring Inputs -->
                         <div class="match-dash-score-entry">
-                            <h:panelGroup rendered="#{match.canRecordResult()}">
-                                <h:inputText id="homeScoreInput" value="#{match.homeScore}" styleClass="match-dash-score-input">
+                            <h:panelGroup rendered="#{row.match.status != 'FINISHED' or row.match.canEditResult()}">
+                                <h:inputText id="hs" value="#{row.homeScore}" styleClass="match-dash-score-input">
                                     <f:passThroughAttribute name="type" value="number"/>
                                     <f:passThroughAttribute name="min" value="0"/>
+                                    <f:passThroughAttribute name="placeholder" value="0"/>
+                                    <f:convertNumber integerOnly="true"/>
                                 </h:inputText>
                                 <span class="match-dash-vs">:</span>
-                                <h:inputText id="awayScoreInput" value="#{match.awayScore}" styleClass="match-dash-score-input">
+                                <h:inputText id="as" value="#{row.awayScore}" styleClass="match-dash-score-input">
                                     <f:passThroughAttribute name="type" value="number"/>
                                     <f:passThroughAttribute name="min" value="0"/>
+                                    <f:passThroughAttribute name="placeholder" value="0"/>
+                                    <f:convertNumber integerOnly="true"/>
                                 </h:inputText>
-                                <h:commandButton value="Save" action="#{adminMatchBean.submitResult(match.id, match.homeScore, match.awayScore)}"
-                                                 styleClass="btn btn-sm btn-success" style="margin-left: 10px;">
-                                    <f:ajax execute="@this homeScoreInput awayScoreInput" render="@form"/>
-                                </h:commandButton>
+                                <h:commandButton value="#{row.match.status == 'FINISHED' ? 'Update' : 'Save'}"
+                                                 action="#{adminMatchBean.forceSubmitResult(row)}"
+                                                 styleClass="btn btn-sm btn-success" style="margin-left: 10px;"/>
                             </h:panelGroup>
 
-                            <h:panelGroup rendered="#{not match.canRecordResult()}">
-                                <h:panelGroup rendered="#{match.status == 'FINISHED'}">
-                                    <span class="match-dash-score-box">
-                                        <h:outputText value="#{match.homeScore}"/>
-                                    </span>
-                                    <span class="match-dash-score-dash">-</span>
-                                    <span class="match-dash-score-box">
-                                        <h:outputText value="#{match.awayScore}"/>
-                                    </span>
-                                </h:panelGroup>
-                                <h:panelGroup rendered="#{match.status == 'SCHEDULED'}">
-                                    <span class="match-dash-score-box match-dash-score-placeholder">-</span>
-                                    <span class="match-dash-vs">vs</span>
-                                    <span class="match-dash-score-box match-dash-score-placeholder">-</span>
-                                </h:panelGroup>
+                            <h:panelGroup rendered="#{row.match.status == 'FINISHED' and row.match.isResultLocked()}">
+                                <span class="match-dash-score-box">
+                                    <h:outputText value="#{row.match.homeScore}"/>
+                                </span>
+                                <span class="match-dash-score-dash">-</span>
+                                <span class="match-dash-score-box">
+                                    <h:outputText value="#{row.match.awayScore}"/>
+                                </span>
                             </h:panelGroup>
                         </div>
 
-                        <!-- Away Team -->
                         <div class="pred-match-team" style="text-align: left;">
                             <span class="team-initials-badge" style="display: inline-flex; vertical-align: middle; margin: 0; margin-right: 15px;">
-                                <h:outputText value="#{adminMatchBean.getTeamInitials(match.awayTeam)}"/>
+                                <h:outputText value="#{adminMatchBean.getTeamInitials(row.match.awayTeam)}"/>
                             </span>
                             <span class="match-team-name" style="font-size: 1.1em;">
-                                <h:outputText value="#{match.awayTeam}"/>
+                                <h:outputText value="#{row.match.awayTeam}"/>
                             </span>
                         </div>
                     </div>
 
                     <!-- Bottom Status Bar -->
-                    <div class="match-dash-status #{match.status == 'FINISHED' ? (match.isResultLocked() ? 'match-dash-status-closed' : 'match-dash-status-finished') : (match.hasStarted() ? 'match-dash-status-live' : 'match-dash-status-scheduled')}">
-                        <h:panelGroup rendered="#{match.status == 'SCHEDULED' and not match.hasStarted()}">
+                    <div class="match-dash-status #{row.match.status == 'FINISHED' ? (row.match.isResultLocked() ? 'match-dash-status-closed' : 'match-dash-status-finished') : (row.match.hasStarted() ? 'match-dash-status-live' : 'match-dash-status-scheduled')}">
+                        <h:panelGroup rendered="#{row.match.status == 'SCHEDULED' and not row.match.hasStarted()}">
                             <span>Status: <strong>Scheduled</strong> (Predictions Open)</span>
                         </h:panelGroup>
-                        <h:panelGroup rendered="#{match.status == 'SCHEDULED' and match.hasStarted()}">
+                        <h:panelGroup rendered="#{row.match.status == 'SCHEDULED' and row.match.hasStarted()}">
                             <span>Status: <strong>Live / In Progress</strong> (Score entry ready)</span>
                         </h:panelGroup>
-                        <h:panelGroup rendered="#{match.status == 'FINISHED' and not match.isResultLocked()}">
-                            <span>Status: <strong>Scored</strong> (Grace window open. Edits allowed until 
-                                <h:outputText value="#{match.resultEnteredAt.plusHours(4)}">
+                        <h:panelGroup rendered="#{row.match.status == 'FINISHED' and not row.match.isResultLocked()}">
+                            <span>Status: <strong>Scored</strong> (Grace window open. Edits allowed until
+                                <h:outputText value="#{row.match.resultEnteredAt.plusHours(4)}">
                                     <f:convertDateTime type="localDateTime" pattern="yyyy-MM-dd HH:mm"/>
                                 </h:outputText>)
                             </span>
                         </h:panelGroup>
-                        <h:panelGroup rendered="#{match.status == 'FINISHED' and match.isResultLocked()}">
+                        <h:panelGroup rendered="#{row.match.status == 'FINISHED' and row.match.isResultLocked()}">
                             <span>Status: <strong>Locked</strong> (Results finalized, predictions locked)</span>
                         </h:panelGroup>
                     </div>
-                </div>
+                </h:form>
             </ui:repeat>
-        </h:form>
+        </div>
     </ui:define>
 </ui:composition>

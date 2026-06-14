@@ -27,6 +27,10 @@ public class Group {
     )
     private List<Team> teams = new ArrayList<>();
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "round_id")
+    private TournamentRound round;
+
     public Group() {}
 
     public Long getId() { return id; }
@@ -40,4 +44,7 @@ public class Group {
 
     public List<Team> getTeams() { return teams; }
     public void setTeams(List<Team> teams) { this.teams = teams; }
+
+    public TournamentRound getRound() { return round; }
+    public void setRound(TournamentRound round) { this.round = round; }
 }

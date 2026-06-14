@@ -9,8 +9,13 @@ import jakarta.enterprise.context.Initialized;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 
-import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
+import com.worldcup.model.Team;
+
 
 /**
  * Seeds sample users and matches on application startup.
@@ -27,6 +32,7 @@ public class DataInitializer {
     @Inject private UserService userService;
     @Inject private MatchService matchService;
     @Inject private com.worldcup.service.WhitelistService whitelistService;
+    @Inject private com.worldcup.service.TeamService teamService;
 
     protected DataInitializer() {}
 
@@ -35,7 +41,8 @@ public class DataInitializer {
         User adminUser = seedAdmin();
         if (adminUser != null) {
             seedNormalUsers(adminUser);
-            seedMatches(adminUser);
+            seedTeams(adminUser);
+            // Matches will be created by admins via Group Creation UI
         }
         LOG.info("=== DataInitializer: done ===");
     }
@@ -95,30 +102,92 @@ public class DataInitializer {
         }
     }
 
-    private void seedMatches(User adminUser) {
-        // Group A
-        createMatch(adminUser, "Qatar",       "Ecuador",     LocalDateTime.of(2027, 6, 11, 18, 0));
-        createMatch(adminUser, "Senegal",     "Netherlands", LocalDateTime.of(2027, 6, 11, 21, 0));
-        createMatch(adminUser, "Qatar",       "Senegal",     LocalDateTime.of(2027, 6, 15, 18, 0));
-        createMatch(adminUser, "Netherlands", "Ecuador",     LocalDateTime.of(2027, 6, 15, 21, 0));
-        // Group B
-        createMatch(adminUser, "England",     "Iran",        LocalDateTime.of(2027, 6, 12, 15, 0));
-        createMatch(adminUser, "USA",         "Wales",       LocalDateTime.of(2027, 6, 12, 18, 0));
-        createMatch(adminUser, "England",     "USA",         LocalDateTime.of(2027, 6, 16, 21, 0));
-        createMatch(adminUser, "Wales",       "Iran",        LocalDateTime.of(2027, 6, 16, 18, 0));
-        // Group C
-        createMatch(adminUser, "Argentina",   "Saudi Arabia", LocalDateTime.of(2027, 6, 13, 12, 0));
-        createMatch(adminUser, "Mexico",      "Poland",       LocalDateTime.of(2027, 6, 13, 15, 0));
-        createMatch(adminUser, "Argentina",   "Mexico",       LocalDateTime.of(2027, 6, 17, 21, 0));
-        createMatch(adminUser, "Poland",      "Saudi Arabia", LocalDateTime.of(2027, 6, 17, 18, 0));
-    }
+    private void seedTeams(User adminUser) {
+        String[] teamNames = {
+            "USA", "Canada", "Mexico", "Argentina", "Brazil", "France", "England", "Spain",
+            "Germany", "Portugal", "Italy", "Netherlands", "Belgium", "Croatia", "Uruguay", "Colombia",
+            "Senegal", "Morocco", "Japan", "South Korea", "Iran", "Australia", "Saudi Arabia", "Qatar",
+            "Nigeria", "Egypt", "Algeria", "Ivory Coast", "Ghana", "Cameroon", "Tunisia", "Mali",
+            "Burkina Faso", "South Africa", "Ecuador", "Peru", "Chile", "Paraguay", "Venezuela", "Costa Rica",
+            "Panama", "Jamaica", "Honduras", "El Salvador", "New Zealand", "Wales", "Poland", "Switzerland"
+        };
+        
+        List<Team> existing = teamService.getAllTeams();
+        if (existing.size() >= 48) {
+            LOG.info("Teams already seeded.");
+            return;
+        }
 
-    private void createMatch(User adminUser, String home, String away, LocalDateTime kickoff) {
-        try {
-            matchService.createMatch(adminUser, home, away, kickoff);
-            LOG.info("Created match: " + home + " vs " + away);
-        } catch (Exception e) {
-            LOG.warning("Skipped match '" + home + " vs " + away + "': " + e.getMessage());
+        Set<String> usedShortCodes = new HashSet<>();
+        for (Team t : existing) {
+            if (t.getShortCode() != null) {
+                usedShortCodes.add(t.getShortCode().toUpperCase());
+            }
+        }
+
+        for (String tName : teamNames) {
+            try {
+                boolean exists = existing.stream().anyMatch(t -> t.getName().equalsIgnoreCase(tName));
+                if (!exists) {
+                    Team t = new Team();
+                    t.setName(tName);
+                    t.setShortCode(generateUniqueShortCode(tName, usedShortCodes));
+                    teamService.createTeam(adminUser, t);
+                    usedShortCodes.add(t.getShortCode());
+                    LOG.info("Created team: " + tName);
+                }
+            } catch (Exception e) {
+                LOG.warning("Skipped team '" + tName + "': " + e.getMessage());
+            }
         }
     }
+
+    /** Builds a unique 3-letter shortcode; avoids collisions like SOU for South Korea vs South Africa. */
+    private static String generateUniqueShortCode(String teamName, Set<String> usedShortCodes) {
+        String preferred = KNOWN_SHORT_CODES.get(teamName);
+        if (preferred != null && !usedShortCodes.contains(preferred)) {
+            return preferred;
+        }
+
+        String[] parts = teamName.trim().split("\\s+");
+        String candidate;
+        if (parts.length >= 2) {
+            StringBuilder initials = new StringBuilder();
+            for (String part : parts) {
+                if (!part.isEmpty() && initials.length() < 3) {
+                    initials.append(Character.toUpperCase(part.charAt(0)));
+                }
+            }
+            candidate = initials.toString();
+            while (candidate.length() < 3) {
+                candidate += "X";
+            }
+        } else {
+            candidate = teamName.substring(0, Math.min(3, teamName.length())).toUpperCase();
+        }
+
+        if (!usedShortCodes.contains(candidate)) {
+            return candidate;
+        }
+
+        for (int i = 1; i <= 9; i++) {
+            String suffix = candidate.substring(0, 2) + i;
+            if (!usedShortCodes.contains(suffix)) {
+                return suffix;
+            }
+        }
+
+        throw new IllegalStateException("Could not generate unique shortcode for: " + teamName);
+    }
+
+    private static final Map<String, String> KNOWN_SHORT_CODES = Map.ofEntries(
+            Map.entry("South Korea", "KOR"),
+            Map.entry("South Africa", "RSA"),
+            Map.entry("Ivory Coast", "CIV"),
+            Map.entry("Costa Rica", "CRC"),
+            Map.entry("Saudi Arabia", "KSA"),
+            Map.entry("New Zealand", "NZL"),
+            Map.entry("El Salvador", "SLV"),
+            Map.entry("Burkina Faso", "BFA")
+    );
 }

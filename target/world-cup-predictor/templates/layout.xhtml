@@ -31,9 +31,9 @@
                             styleClass="nav-link#{navBean.isActive('predictions') ? ' active' : ''}"/>
                     <h:link outcome="leaderboard" value="Leaderboard"
                             styleClass="nav-link#{navBean.isActive('leaderboard') ? ' active' : ''}"/>
-                    <h:link outcome="users" value="Users"
-                            styleClass="nav-link#{navBean.isActive('users') ? ' active' : ''}"/>
                     <h:panelGroup rendered="#{authBean.admin}" layout="inline">
+                        <h:link outcome="users" value="Users"
+                                styleClass="nav-link#{navBean.isActive('users') ? ' active' : ''}"/>
                         <h:link outcome="admin-whitelist" value="Admin Whitelist"
                                 styleClass="nav-link#{navBean.isActive('admin-whitelist') ? ' active' : ''}"/>
                         <h:link outcome="admin-rounds" value="Admin Rounds"

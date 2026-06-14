@@ -192,16 +192,13 @@ public class MatchBean implements Serializable {
             return "";
         }
         if (match.isFinished()) {
-            if (match.canEditResult()) {
+            if (authBean != null && authBean.isAdmin() && match.canEditResult()) {
                 return "Result entered. Editable within " + Match.RESULT_WINDOW_HOURS + "h";
             }
-            return "Finished & Locked";
-        }
-        if (match.canRecordResult()) {
-            return "In progress — await final whistle to enter result";
+            return "Finished";
         }
         if (match.hasStarted()) {
-            return "Match started";
+            return "Live / In Progress";
         }
         return "Scheduled";
     }

@@ -145,62 +145,58 @@
                             </h:form>
                         </h:panelGroup>
 
-                        <h:panelGroup rendered="#{not row.finished and row.canRecordResult and not authBean.admin}">
-                            <div class="match-dash-item-body match-dash-waiting">
-                                <span class="match-dash-vs">Match in progress — awaiting result entry</span>
-                            </div>
-                        </h:panelGroup>
-
-                        <h:panelGroup rendered="#{not row.finished and not row.canRecordResult and authBean.admin}">
-                            <h:form prependId="false" styleClass="match-dash-result-form">
+                        <h:panelGroup rendered="#{not row.finished and not row.canRecordResult}">
+                            <h:form prependId="false" styleClass="match-dash-result-form" rendered="#{authBean.admin}">
                                 <div class="match-dash-item-body">
                                     <div class="pred-match-team">
+                                        <div class="match-team-flag">
+                                            <h:outputText value="#{matchBean.getFlagForTeam(row.match.homeTeam)}" escape="false"/>
+                                        </div>
                                         <span class="match-team-name"><h:outputText value="#{row.match.homeTeam}"/></span>
                                     </div>
                                     <div class="match-dash-score-entry">
-                                        <h:inputText id="homeScoreForce" value="#{row.homeScore}"
+                                        <h:inputText id="homeScore" value="#{row.homeScore}"
                                                      styleClass="match-dash-score-input">
                                             <f:convertNumber integerOnly="true"/>
                                         </h:inputText>
                                         <span class="match-dash-vs">VS</span>
-                                        <h:inputText id="awayScoreForce" value="#{row.awayScore}"
+                                        <h:inputText id="awayScore" value="#{row.awayScore}"
                                                      styleClass="match-dash-score-input">
                                             <f:convertNumber integerOnly="true"/>
                                         </h:inputText>
                                     </div>
                                     <div class="pred-match-team">
+                                        <div class="match-team-flag">
+                                            <h:outputText value="#{matchBean.getFlagForTeam(row.match.awayTeam)}" escape="false"/>
+                                        </div>
                                         <span class="match-team-name"><h:outputText value="#{row.match.awayTeam}"/></span>
                                     </div>
                                 </div>
                                 <div class="match-dash-save-row">
-                                    <h:commandButton value="Force Record Result"
+                                    <h:commandButton value="Save Result"
                                                      action="#{matchBean.forceResultFromRow(row)}"
-                                                     styleClass="btn btn-warning btn-sm"
-                                                     title="Record result bypassing time window (admin only)"/>
+                                                     styleClass="btn btn-success btn-sm"/>
                                 </div>
                             </h:form>
-                        </h:panelGroup>
-
-                        <h:panelGroup rendered="#{not row.finished and not row.canRecordResult and not authBean.admin}">
-                            <div class="match-dash-item-body">
-                                <div class="pred-match-team">
-                                    <div class="team-initials-badge">
-                                        <h:outputText value="#{matchBean.getTeamInitials(row.match.homeTeam)}"/>
+                            <h:panelGroup rendered="#{not authBean.admin}">
+                                <div class="match-dash-item-body">
+                                    <div class="pred-match-team">
+                                        <div class="match-team-flag">
+                                            <h:outputText value="#{matchBean.getFlagForTeam(row.match.homeTeam)}" escape="false"/>
+                                        </div>
+                                        <span class="match-team-name"><h:outputText value="#{row.match.homeTeam}"/></span>
                                     </div>
-                                    <span class="match-team-name"><h:outputText value="#{row.match.homeTeam}"/></span>
-                                </div>
-                                <div class="match-dash-score-entry match-dash-score-placeholder">
-                                    <span class="match-dash-score-box match-dash-score-dash">-</span>
-                                    <span class="match-dash-vs">VS</span>
-                                    <span class="match-dash-score-box match-dash-score-dash">-</span>
-                                </div>
-                                <div class="pred-match-team">
-                                    <div class="team-initials-badge">
-                                        <h:outputText value="#{matchBean.getTeamInitials(row.match.awayTeam)}"/>
+                                    <div class="match-dash-score-entry match-dash-score-placeholder">
+                                        <span class="match-dash-vs" style="font-size: 0.95em; color: #9ca3af; font-weight: 500;">Not Started</span>
                                     </div>
-                                    <span class="match-team-name"><h:outputText value="#{row.match.awayTeam}"/></span>
+                                    <div class="pred-match-team">
+                                        <div class="match-team-flag">
+                                            <h:outputText value="#{matchBean.getFlagForTeam(row.match.awayTeam)}" escape="false"/>
+                                        </div>
+                                        <span class="match-team-name"><h:outputText value="#{row.match.awayTeam}"/></span>
+                                    </div>
                                 </div>
-                            </div>
+                            </h:panelGroup>
                         </h:panelGroup>
 
                         <div class="#{matchBean.getStatusBarClass(row.match)}">

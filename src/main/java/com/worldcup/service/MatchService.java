@@ -3,6 +3,8 @@ package com.worldcup.service;
 import com.worldcup.model.Match;
 import com.worldcup.model.MatchStatus;
 import com.worldcup.model.User;
+import com.worldcup.model.Team;
+import com.worldcup.model.Group;
 import com.worldcup.repository.MatchRepository;
 import com.worldcup.security.SecurityService;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -61,6 +63,30 @@ public class MatchService {
             throw new IllegalArgumentException("Home team and away team cannot be the same.");
 
         return matchRepository.save(new Match(null, homeTeam.trim(), awayTeam.trim(), kickoffDate));
+    }
+
+    /**
+     * Creates a new match linked to specific Team entities and a Group (ADMIN-ONLY).
+     */
+    public Match createMatch(User adminUser, Team homeTeam, Team awayTeam, Group group, LocalDateTime kickoffDate) {
+        SecurityService.assertAdmin(adminUser, "create match");
+        
+        if (homeTeam == null || awayTeam == null)
+            throw new IllegalArgumentException("Teams cannot be null.");
+        if (kickoffDate == null)
+            throw new IllegalArgumentException("Kickoff date cannot be null.");
+        if (homeTeam.getId().equals(awayTeam.getId()))
+            throw new IllegalArgumentException("Home team and away team cannot be the same.");
+
+        Match match = new Match(null, homeTeam.getName(), awayTeam.getName(), kickoffDate);
+        match.setHomeTeamEntity(homeTeam);
+        match.setAwayTeamEntity(awayTeam);
+        match.setGroup(group);
+        if (group != null && group.getRound() != null) {
+            match.setRound(group.getRound());
+            match.setStage(group.getRound().getStage());
+        }
+        return matchRepository.save(match);
     }
 
     /**

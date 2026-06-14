@@ -37,7 +37,12 @@ public class JpaMatchRepository implements MatchRepository {
 
     @Override
     public List<Match> findAll() {
-        return em.createQuery("SELECT m FROM Match m ORDER BY m.kickoffDate", Match.class).getResultList();
+        return em.createQuery(
+                "SELECT DISTINCT m FROM Match m "
+                        + "LEFT JOIN FETCH m.homeTeamEntity "
+                        + "LEFT JOIN FETCH m.awayTeamEntity "
+                        + "ORDER BY m.kickoffDate",
+                Match.class).getResultList();
     }
 
     @Override
