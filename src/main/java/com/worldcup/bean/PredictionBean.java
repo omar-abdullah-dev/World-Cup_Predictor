@@ -13,6 +13,8 @@ import jakarta.inject.Named;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -37,6 +39,9 @@ public class PredictionBean implements Serializable {
 
     private static final long serialVersionUID = 1L;
     private static final Logger LOG = Logger.getLogger(PredictionBean.class.getName());
+    private static final ZoneId EGYPT = ZoneId.of("Africa/Cairo");
+    private static final DateTimeFormatter EGYPT_FMT =
+            DateTimeFormatter.ofPattern("dd MMM yyyy \u00b7 HH:mm");
 
     private String errorMessage;
     private String successMessage;
@@ -152,8 +157,9 @@ public class PredictionBean implements Serializable {
     // -----------------------------------------------------------------------
 
     public String formatPredictionKickoff(LocalDateTime kickoff) {
-        return kickoff == null ? ""
-                : kickoff.format(DateTimeFormatter.ofPattern("dd MMM yyyy \u00b7 HH:mm"));
+        if (kickoff == null) return "";
+        ZonedDateTime egypt = kickoff.atZone(ZoneId.of("UTC")).withZoneSameInstant(EGYPT);
+        return egypt.format(EGYPT_FMT) + " (Cairo)";
     }
 
     /** Minutes remaining before the prediction window closes, or 0 if already locked. */

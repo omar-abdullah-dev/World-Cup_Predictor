@@ -12,6 +12,9 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 
 import java.io.Serializable;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -19,7 +22,8 @@ import java.util.stream.Collectors;
 
 /**
  * Backing bean for the Group Details screen.
- * Uses row DTOs for score inputs to avoid JSF Map-key binding issues.
+ * Uses the logged-in AuthBean user for predictions.
+ * Displays kickoff times in Egypt time (Africa/Cairo = UTC+3 in summer).
  */
 @Named
 @ViewScoped
@@ -27,10 +31,14 @@ public class GroupDetailsBean implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    /** Egypt Standard Time / EET — UTC+3 (no DST in summer). */
+    private static final ZoneId EGYPT_ZONE = ZoneId.of("Africa/Cairo");
+    private static final DateTimeFormatter EGYPT_FMT =
+            DateTimeFormatter.ofPattern("dd MMM yyyy · HH:mm");
 
     @Inject private MatchService matchService;
     @Inject private PredictionService predictionService;
-    @Inject private UserSessionBean userSessionBean;
+    @Inject private AuthBean authBean;
 
     private String group;
     private List<MatchRow> matchRows = new ArrayList<>();
@@ -68,8 +76,8 @@ public class GroupDetailsBean implements Serializable {
             return null;
         }
 
-        if (!userSessionBean.isUserSelected()) {
-            errorMessage = "Please select a user before making predictions.";
+        if (!authBean.isLoggedIn()) {
+            errorMessage = "You must be logged in to submit predictions.";
             return null;
         }
 
@@ -87,7 +95,7 @@ public class GroupDetailsBean implements Serializable {
         }
 
         try {
-            User user = userSessionBean.getSelectedUser();
+            User user = authBean.getUser();
             boolean updating = predictionService.hasPredictionForMatch(user.getId(), matchId);
             predictionService.submitPrediction(
                     user.getId(),
@@ -97,8 +105,8 @@ public class GroupDetailsBean implements Serializable {
             );
             row.refreshPrediction();
             successMessage = updating
-                    ? "Prediction updated for " + user.getUsername() + "."
-                    : "Prediction saved for " + user.getUsername() + ".";
+                    ? "Prediction updated."
+                    : "Prediction saved.";
         } catch (IllegalArgumentException e) {
             errorMessage = e.getMessage();
         }
@@ -107,10 +115,10 @@ public class GroupDetailsBean implements Serializable {
     }
 
     public Prediction getUserPrediction(Long matchId) {
-        if (!userSessionBean.isUserSelected() || matchId == null) {
+        if (!authBean.isLoggedIn() || matchId == null) {
             return null;
         }
-        return predictionService.getPredictionsByUser(userSessionBean.getSelectedUser().getId()).stream()
+        return predictionService.getPredictionsByUser(authBean.getCurrentUserId()).stream()
                 .filter(p -> matchId.equals(p.getMatchId()))
                 .findFirst()
                 .orElse(null);
@@ -136,7 +144,7 @@ public class GroupDetailsBean implements Serializable {
     }
 
     public boolean isUserSelected() {
-        return userSessionBean.isUserSelected();
+        return authBean.isLoggedIn();
     }
 
     public boolean isGroupMissing() {
@@ -144,7 +152,7 @@ public class GroupDetailsBean implements Serializable {
     }
 
     public String getSelectedUsername() {
-        return userSessionBean.getSelectedUsername();
+        return authBean.getCurrentUsername();
     }
 
     public String getGroup() {
@@ -152,7 +160,11 @@ public class GroupDetailsBean implements Serializable {
     }
 
     public String formatDateTime(java.time.LocalDateTime dt) {
-        return dt == null ? "" : dt.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+        if (dt == null) return "";
+        // Kickoff times are stored as UTC in the DB.
+        // Convert to Egypt time (Africa/Cairo = UTC+3 in summer, no DST).
+        ZonedDateTime egyptTime = dt.atZone(ZoneId.of("UTC")).withZoneSameInstant(EGYPT_ZONE);
+        return egyptTime.format(EGYPT_FMT) + " (Cairo)";
     }
 
     public String getErrorMessage() {

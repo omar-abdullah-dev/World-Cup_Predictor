@@ -15,11 +15,13 @@ C:\Users\moham\Desktop\work practice\World_Cup_Prediction_fixed\src\main\java\co
 C:\Users\moham\Desktop\work practice\World_Cup_Prediction_fixed\src\main\java\com\worldcup\bean\UserBean.java
 C:\Users\moham\Desktop\work practice\World_Cup_Prediction_fixed\src\main\java\com\worldcup\bean\UserSessionBean.java
 C:\Users\moham\Desktop\work practice\World_Cup_Prediction_fixed\src\main\java\com\worldcup\config\DataInitializer.java
+C:\Users\moham\Desktop\work practice\World_Cup_Prediction_fixed\src\main\java\com\worldcup\config\GameConstants.java
 C:\Users\moham\Desktop\work practice\World_Cup_Prediction_fixed\src\main\java\com\worldcup\model\Group.java
 C:\Users\moham\Desktop\work practice\World_Cup_Prediction_fixed\src\main\java\com\worldcup\model\Match.java
 C:\Users\moham\Desktop\work practice\World_Cup_Prediction_fixed\src\main\java\com\worldcup\model\MatchStatus.java
 C:\Users\moham\Desktop\work practice\World_Cup_Prediction_fixed\src\main\java\com\worldcup\model\Prediction.java
 C:\Users\moham\Desktop\work practice\World_Cup_Prediction_fixed\src\main\java\com\worldcup\model\RoundStatus.java
+C:\Users\moham\Desktop\work practice\World_Cup_Prediction_fixed\src\main\java\com\worldcup\model\SystemActivityLog.java
 C:\Users\moham\Desktop\work practice\World_Cup_Prediction_fixed\src\main\java\com\worldcup\model\Team.java
 C:\Users\moham\Desktop\work practice\World_Cup_Prediction_fixed\src\main\java\com\worldcup\model\TournamentRound.java
 C:\Users\moham\Desktop\work practice\World_Cup_Prediction_fixed\src\main\java\com\worldcup\model\TournamentStage.java
@@ -53,6 +55,7 @@ C:\Users\moham\Desktop\work practice\World_Cup_Prediction_fixed\src\main\java\co
 C:\Users\moham\Desktop\work practice\World_Cup_Prediction_fixed\src\main\java\com\worldcup\security\SecurityException.java
 C:\Users\moham\Desktop\work practice\World_Cup_Prediction_fixed\src\main\java\com\worldcup\security\SecurityFilter.java
 C:\Users\moham\Desktop\work practice\World_Cup_Prediction_fixed\src\main\java\com\worldcup\security\SecurityService.java
+C:\Users\moham\Desktop\work practice\World_Cup_Prediction_fixed\src\main\java\com\worldcup\service\ActivityLogService.java
 C:\Users\moham\Desktop\work practice\World_Cup_Prediction_fixed\src\main\java\com\worldcup\service\GroupService.java
 C:\Users\moham\Desktop\work practice\World_Cup_Prediction_fixed\src\main\java\com\worldcup\service\MatchService.java
 C:\Users\moham\Desktop\work practice\World_Cup_Prediction_fixed\src\main\java\com\worldcup\service\PredictionService.java

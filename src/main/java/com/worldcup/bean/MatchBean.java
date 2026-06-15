@@ -13,6 +13,8 @@ import jakarta.inject.Named;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -22,9 +24,7 @@ import java.util.logging.Logger;
 
 /**
  * Backing bean for the Matches dashboard.
- * Uses per-match rows for inline result entry.
- * 
- * Enhanced with security: admin-only operations are guarded by AuthBean.
+ * All kickoff times are displayed in Egypt time (Africa/Cairo = UTC+3 in summer).
  */
 @Named
 @ViewScoped
@@ -32,6 +32,13 @@ public class MatchBean implements Serializable {
 
     private static final long serialVersionUID = 1L;
     private static final Logger LOG = Logger.getLogger(MatchBean.class.getName());
+
+    /** Egypt timezone — UTC+3, no DST during summer. */
+    private static final ZoneId EGYPT = ZoneId.of("Africa/Cairo");
+    private static final DateTimeFormatter EGYPT_DISPLAY =
+            DateTimeFormatter.ofPattern("dd MMM yyyy - HH:mm");
+    private static final DateTimeFormatter EGYPT_DISPLAY_DOT =
+            DateTimeFormatter.ofPattern("dd MMM yyyy \u00b7 HH:mm");
 
     private String homeTeam;
     private String awayTeam;
@@ -182,15 +189,21 @@ public class MatchBean implements Serializable {
     }
 
     public String formatMatchKickoff(LocalDateTime dt) {
-        return dt == null ? "" : dt.format(DateTimeFormatter.ofPattern("dd MMM yyyy - HH:mm"));
+        if (dt == null) return "";
+        ZonedDateTime egypt = dt.atZone(ZoneId.of("UTC")).withZoneSameInstant(EGYPT);
+        return egypt.format(EGYPT_DISPLAY) + " (Cairo)";
     }
 
     public String formatPredictionKickoff(LocalDateTime dt) {
-        return dt == null ? "" : dt.format(DateTimeFormatter.ofPattern("dd MMM yyyy · HH:mm"));
+        if (dt == null) return "";
+        ZonedDateTime egypt = dt.atZone(ZoneId.of("UTC")).withZoneSameInstant(EGYPT);
+        return egypt.format(EGYPT_DISPLAY_DOT) + " (Cairo)";
     }
 
     public String formatDateTime(LocalDateTime dt) {
-        return dt == null ? "" : dt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+        if (dt == null) return "";
+        ZonedDateTime egypt = dt.atZone(ZoneId.of("UTC")).withZoneSameInstant(EGYPT);
+        return egypt.format(EGYPT_DISPLAY);
     }
 
     public String getStatusBarText(Match match) {

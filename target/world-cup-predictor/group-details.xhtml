@@ -16,7 +16,6 @@
     <ui:define name="content">
         <div class="page-header">
             <h2>&#127750; <h:outputText value="#{groupDetailsBean.groupTitle}"/></h2>
-            <p>View matches in this group and submit predictions in one step</p>
             <h:link outcome="groups" value="&#8592; Back to Groups" styleClass="back-link"/>
         </div>
 
@@ -25,14 +24,6 @@
                 <h3>&#9888; No group selected</h3>
                 <p class="alert-body">Choose a group from the dashboard or groups page.</p>
                 <h:link outcome="groups" value="View Groups" styleClass="btn btn-primary"/>
-            </div>
-        </h:panelGroup>
-
-        <h:panelGroup rendered="#{not groupDetailsBean.groupMissing and not groupDetailsBean.isUserSelected()}">
-            <div class="card alert-warning">
-                <h3>&#9888; Please select a user</h3>
-                <p class="alert-body">You need to select a user before making predictions.</p>
-                <h:link outcome="users" value="Select User" styleClass="btn btn-primary"/>
             </div>
         </h:panelGroup>
 
@@ -106,13 +97,13 @@
                         </h:panelGroup>
 
                         <h:panelGroup rendered="#{row.predictionOpen and groupDetailsBean.isUserSelected()}">
-                            <h:form id="matchForm" prependId="false" styleClass="match-prediction-form">
+                            <h:form styleClass="match-prediction-form">
                                 <div class="match-content-row">
                                     <div class="match-team-left">
                                         <h:outputText value="#{row.match.homeTeam}"/>
                                     </div>
                                     <div class="match-scores-center">
-                                        <h:inputText id="homeScore_#{row.matchId}" value="#{row.homeScore}"
+                                        <h:inputText id="homeScore" value="#{row.homeScore}"
                                                      required="true" requiredMessage="Home score is required"
                                                      styleClass="score-input"
                                                      title="Enter home score for #{row.match.homeTeam}">
@@ -120,7 +111,7 @@
                                             <f:validateLongRange minimum="0"/>
                                         </h:inputText>
                                         <span class="score-separator">:</span>
-                                        <h:inputText id="awayScore_#{row.matchId}" value="#{row.awayScore}"
+                                        <h:inputText id="awayScore" value="#{row.awayScore}"
                                                      required="true" requiredMessage="Away score is required"
                                                      styleClass="score-input"
                                                      title="Enter away score for #{row.match.awayTeam}">
@@ -134,9 +125,13 @@
                                 </div>
 
                                 <h:panelGroup rendered="#{row.hasPrediction}" styleClass="match-prediction-text match-prediction-text-accent">
-                                    Your Prediction:
+                                    Your current pick:
                                     <strong>
-                                        <h:outputText value="#{row.match.homeTeam} #{row.prediction.predictedHomeScore} : #{row.prediction.predictedAwayScore} #{row.match.awayTeam}"/>
+                                        <h:outputText value="#{row.match.homeTeam}"/>
+                                        <h:outputText value="#{row.prediction.predictedHomeScore}"/>
+                                        :
+                                        <h:outputText value="#{row.prediction.predictedAwayScore}"/>
+                                        <h:outputText value="#{row.match.awayTeam}"/>
                                     </strong>
                                 </h:panelGroup>
 
@@ -146,29 +141,21 @@
                             </h:form>
                         </h:panelGroup>
 
-                        <h:panelGroup rendered="#{row.predictionLocked and groupDetailsBean.isUserSelected()}">
+                        <h:panelGroup rendered="#{row.predictionLocked}">
                             <div class="pred-locked-notice">
                                 <p class="alert-body">Predictions are locked — this match has already started.</p>
-                                <h:panelGroup rendered="#{row.hasPrediction}">
+                                <h:panelGroup rendered="#{row.hasPrediction and groupDetailsBean.isUserSelected()}">
                                     <p class="match-prediction-text">
-                                        Your Prediction:
+                                        Your pick:
                                         <strong>
-                                            <h:outputText value="#{row.match.homeTeam} #{row.prediction.predictedHomeScore} : #{row.prediction.predictedAwayScore} #{row.match.awayTeam}"/>
+                                            <h:outputText value="#{row.match.homeTeam}"/>
+                                            <h:outputText value="#{row.prediction.predictedHomeScore}"/>
+                                            :
+                                            <h:outputText value="#{row.prediction.predictedAwayScore}"/>
+                                            <h:outputText value="#{row.match.awayTeam}"/>
                                         </strong>
                                     </p>
                                 </h:panelGroup>
-                            </div>
-                        </h:panelGroup>
-
-                        <h:panelGroup rendered="#{row.predictionOpen and not groupDetailsBean.isUserSelected()}">
-                            <div class="match-content-row">
-                                <div class="match-team-left">
-                                    <h:outputText value="#{row.match.homeTeam}"/>
-                                </div>
-                                <div class="match-vs">VS</div>
-                                <div class="match-team-right">
-                                    <h:outputText value="#{row.match.awayTeam}"/>
-                                </div>
                             </div>
                         </h:panelGroup>
                     </div>
