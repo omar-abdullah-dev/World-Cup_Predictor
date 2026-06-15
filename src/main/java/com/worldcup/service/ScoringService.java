@@ -1,5 +1,6 @@
 package com.worldcup.service;
 
+import com.worldcup.config.GameConstants;
 import com.worldcup.model.Match;
 import com.worldcup.model.Prediction;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -7,7 +8,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 /**
  * Evaluates prediction accuracy and returns earned points.
  *
- * Scoring rules:
+ * Scoring rules (configurable via GameConstants):
  *   2 pts – exact score match
  *   1 pt  – correct outcome (winner / draw), wrong score
  *   0 pts – neither score nor outcome correct
@@ -15,9 +16,9 @@ import jakarta.enterprise.context.ApplicationScoped;
 @ApplicationScoped
 public class ScoringService {
 
-    public static final int EXACT_SCORE_POINTS      = 2;
-    public static final int CORRECT_OUTCOME_POINTS  = 1;
-    public static final int INCORRECT_POINTS        = 0;
+    public static final int EXACT_SCORE_POINTS     = GameConstants.POINTS_EXACT_SCORE;
+    public static final int CORRECT_OUTCOME_POINTS = GameConstants.POINTS_CORRECT_OUTCOME;
+    public static final int INCORRECT_POINTS       = GameConstants.POINTS_INCORRECT;
 
     /**
      * Calculates points for a prediction against a finished match.

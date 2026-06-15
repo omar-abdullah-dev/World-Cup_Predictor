@@ -2,6 +2,7 @@ package com.worldcup.bean.admin;
 
 import com.worldcup.bean.AuthBean;
 import com.worldcup.model.WhitelistEntry;
+import com.worldcup.service.ActivityLogService;
 import com.worldcup.service.WhitelistService;
 import jakarta.annotation.PostConstruct;
 import jakarta.faces.application.FacesMessage;
@@ -21,6 +22,7 @@ public class AdminWhitelistBean implements Serializable {
 
     @Inject private WhitelistService whitelistService;
     @Inject private AuthBean authBean;
+    @Inject private ActivityLogService activityLogService;
 
     private List<WhitelistEntry> entries;
     private String adUsername;
@@ -33,12 +35,23 @@ public class AdminWhitelistBean implements Serializable {
     }
 
     public void loadEntries() {
+        // Guard against stale ViewScoped bean when session has expired
+        if (authBean.getUser() == null) {
+            entries = java.util.Collections.emptyList();
+            return;
+        }
         entries = whitelistService.getAllEntries(authBean.getUser());
     }
 
     public void addEntry() {
+        if (authBean.getUser() == null) return;
         try {
             whitelistService.addEntry(authBean.getUser(), adUsername, employeeName, email);
+            String username = authBean.getUser().getUsername();
+            activityLogService.log("WL-CRE",
+                    "WL-CRE | screen=admin-whitelist.xhtml | user=" + username
+                    + " | detail=Added '" + adUsername + "' to whitelist",
+                    username);
             addMessage(FacesMessage.SEVERITY_INFO, "User added to whitelist");
             adUsername = employeeName = email = null;
             loadEntries();
@@ -48,8 +61,14 @@ public class AdminWhitelistBean implements Serializable {
     }
 
     public void toggleStatus(Long id, boolean enabled) {
+        if (authBean.getUser() == null) return;
         try {
             whitelistService.toggleStatus(authBean.getUser(), id, enabled);
+            String username = authBean.getUser().getUsername();
+            activityLogService.log("WL-UPD",
+                    "WL-UPD | screen=admin-whitelist.xhtml | user=" + username
+                    + " | detail=entryId=" + id + " enabled=" + enabled,
+                    username);
             addMessage(FacesMessage.SEVERITY_INFO, "Status updated");
             loadEntries();
         } catch (Exception e) {
@@ -58,8 +77,14 @@ public class AdminWhitelistBean implements Serializable {
     }
 
     public void removeEntry(Long id) {
+        if (authBean.getUser() == null) return;
         try {
             whitelistService.removeEntry(authBean.getUser(), id);
+            String username = authBean.getUser().getUsername();
+            activityLogService.log("WL-DEL",
+                    "WL-DEL | screen=admin-whitelist.xhtml | user=" + username
+                    + " | detail=entryId=" + id + " removed from whitelist",
+                    username);
             addMessage(FacesMessage.SEVERITY_INFO, "User removed from whitelist");
             loadEntries();
         } catch (Exception e) {

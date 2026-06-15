@@ -3,6 +3,7 @@ package com.worldcup.bean;
 import com.worldcup.model.User;
 import com.worldcup.security.AuthenticationService;
 import com.worldcup.security.SecurityException;
+import com.worldcup.service.ActivityLogService;
 import jakarta.enterprise.context.SessionScoped;
 import jakarta.faces.context.FacesContext;
 import jakarta.inject.Inject;
@@ -34,6 +35,7 @@ public class AuthBean implements Serializable {
     private static final Logger LOGGER = Logger.getLogger(AuthBean.class.getName());
 
     @Inject private AuthenticationService authenticationService;
+    @Inject private ActivityLogService activityLogService;
 
     private User user;
     private String username;
@@ -69,6 +71,10 @@ public class AuthBean implements Serializable {
             this.password = null;
             
             LOGGER.info("User logged in: " + user.getUsername());
+            activityLogService.log("LOGIN",
+                    "LOGIN | screen=login.xhtml | user=" + user.getUsername()
+                    + " | detail=Login successful",
+                    user.getUsername());
             
             // Redirect to dashboard
             return "/index.xhtml?faces-redirect=true";
@@ -85,13 +91,16 @@ public class AuthBean implements Serializable {
 
     /**
      * Handles logout.
-     * Clears the user from session and invalidates the session.
-     * 
-     * @return "redirect:login.xhtml"
+     * Uses direct redirect via ExternalContext to avoid JSF navigation case errors
+     * when logging out from any page (including admin pages with no faces-config rules).
      */
-    public String logout() {
+    public void logout() {
         if (user != null) {
             LOGGER.info("User logged out: " + user.getUsername());
+            activityLogService.log("LOGOUT",
+                    "LOGOUT | screen=login.xhtml | user=" + user.getUsername()
+                    + " | detail=User logged out",
+                    user.getUsername());
         }
         this.user = null;
         this.username = null;
@@ -99,14 +108,15 @@ public class AuthBean implements Serializable {
         this.errorMessage = null;
         this.successMessage = null;
 
-        // Invalidate session
         try {
-            FacesContext.getCurrentInstance().getExternalContext().invalidateSession();
+            FacesContext fc = FacesContext.getCurrentInstance();
+            fc.getExternalContext().invalidateSession();
+            fc.getExternalContext().redirect(
+                fc.getExternalContext().getRequestContextPath() + "/login.xhtml");
+            fc.responseComplete();
         } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Error invalidating session", e);
+            LOGGER.log(Level.WARNING, "Error during logout redirect", e);
         }
-
-        return "redirect:login.xhtml";
     }
 
     /**

@@ -45,9 +45,11 @@ public class GroupDetailsBean implements Serializable {
     }
 
     public void setGroup(String group) {
+        // Preserve original casing — DB stores "Group A", "Group B" etc.
+        // Just trim whitespace; comparison in loadMatchRows uses equalsIgnoreCase.
         String normalized = group == null || group.isBlank()
                 ? null
-                : group.trim().toUpperCase(Locale.ROOT);
+                : group.trim();
         if (java.util.Objects.equals(this.group, normalized)) {
             return;
         }
@@ -123,10 +125,14 @@ public class GroupDetailsBean implements Serializable {
     }
 
     public String getGroupTitle() {
-        if (groupMissing) {
+        if (groupMissing || group == null || group.isBlank()) {
             return "Group";
         }
-        return group == null || group.isBlank() ? "Group" : "Group " + group.toUpperCase(Locale.ROOT);
+        // If the stored name already starts with "Group" (e.g. "Group A"), return it as-is.
+        if (group.toLowerCase(Locale.ROOT).startsWith("group")) {
+            return group;
+        }
+        return "Group " + group;
     }
 
     public boolean isUserSelected() {
@@ -169,7 +175,8 @@ public class GroupDetailsBean implements Serializable {
         }
         String groupParam = context.getExternalContext().getRequestParameterMap().get("group");
         if (groupParam != null && !groupParam.isBlank()) {
-            this.group = groupParam.trim().toUpperCase(Locale.ROOT);
+            // Preserve original casing — DB names are "Group A", "Group B" etc.
+            this.group = groupParam.trim();
             groupMissing = false;
         } else {
             groupMissing = true;

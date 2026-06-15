@@ -20,10 +20,10 @@
         <div class="cards-grid cards-grid-4-col">
             <ui:repeat value="#{groupsBean.groupNames}" var="group">
                 <div class="group-card">
-                    <h4>Group <h:outputText value="#{group}"/></h4>
+                    <h4><h:outputText value="#{group}"/></h4>
                     <ul class="group-card-teams">
                         <ui:repeat value="#{groupsBean.getTeamsByGroup(group)}" var="team">
-                            <li><h:outputText value="#{team}"/></li>
+                            <li><h:outputText value="#{team.name}"/></li>
                         </ui:repeat>
                     </ul>
                     <h:link outcome="group-details" includeViewParams="true" styleClass="group-card-btn">

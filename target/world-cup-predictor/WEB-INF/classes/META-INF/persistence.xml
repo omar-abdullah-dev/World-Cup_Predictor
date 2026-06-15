@@ -17,6 +17,7 @@
         <class>com.worldcup.model.Group</class>
         <class>com.worldcup.model.TournamentRound</class>
         <class>com.worldcup.model.WhitelistEntry</class>
+        <class>com.worldcup.model.SystemActivityLog</class>
 
         <properties>
             <!-- Hibernate dialect for PostgreSQL -->

@@ -41,20 +41,36 @@ public class JpaMatchRepository implements MatchRepository {
                 "SELECT DISTINCT m FROM Match m "
                         + "LEFT JOIN FETCH m.homeTeamEntity "
                         + "LEFT JOIN FETCH m.awayTeamEntity "
+                        + "LEFT JOIN FETCH m.round "
+                        + "LEFT JOIN FETCH m.group "
                         + "ORDER BY m.kickoffDate",
                 Match.class).getResultList();
     }
 
     @Override
     public List<Match> findByRound(Long roundId) {
-        return em.createQuery("SELECT m FROM Match m WHERE m.round.id = :roundId ORDER BY m.kickoffDate", Match.class)
+        return em.createQuery(
+                "SELECT DISTINCT m FROM Match m "
+                        + "LEFT JOIN FETCH m.homeTeamEntity "
+                        + "LEFT JOIN FETCH m.awayTeamEntity "
+                        + "LEFT JOIN FETCH m.round "
+                        + "LEFT JOIN FETCH m.group "
+                        + "WHERE m.round.id = :roundId ORDER BY m.kickoffDate",
+                Match.class)
                 .setParameter("roundId", roundId)
                 .getResultList();
     }
 
     @Override
     public List<Match> findByGroup(Long groupId) {
-        return em.createQuery("SELECT m FROM Match m WHERE m.group.id = :groupId ORDER BY m.kickoffDate", Match.class)
+        return em.createQuery(
+                "SELECT DISTINCT m FROM Match m "
+                        + "LEFT JOIN FETCH m.homeTeamEntity "
+                        + "LEFT JOIN FETCH m.awayTeamEntity "
+                        + "LEFT JOIN FETCH m.round "
+                        + "LEFT JOIN FETCH m.group "
+                        + "WHERE m.group.id = :groupId ORDER BY m.kickoffDate",
+                Match.class)
                 .setParameter("groupId", groupId)
                 .getResultList();
     }

@@ -5,6 +5,8 @@ import com.worldcup.model.MatchStatus;
 import com.worldcup.security.SecurityException;
 import com.worldcup.service.MatchService;
 import jakarta.annotation.PostConstruct;
+import jakarta.faces.context.ExternalContext;
+import jakarta.faces.context.FacesContext;
 import jakarta.faces.view.ViewScoped;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -15,6 +17,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.logging.Logger;
 
 /**
  * Backing bean for the Matches dashboard.
@@ -27,6 +31,7 @@ import java.util.List;
 public class MatchBean implements Serializable {
 
     private static final long serialVersionUID = 1L;
+    private static final Logger LOG = Logger.getLogger(MatchBean.class.getName());
 
     private String homeTeam;
     private String awayTeam;
@@ -74,28 +79,67 @@ public class MatchBean implements Serializable {
 
     /**
      * Records the result of a match (ADMIN-ONLY).
-     * Calls MatchService.updateResult(adminUser, ...) which enforces the admin check.
+     * Reads hs_<matchId> / as_<matchId> directly from the HTTP request params
+     * to avoid the JSF ui:repeat map-binding issue.
      */
-    public String submitResultFromRow(MatchDashboardRow row) {
+    public String submitResultFromRow(Long matchId) {
         errorMessage = null;
         successMessage = null;
+        return saveResult(matchId, false);
+    }
 
-        if (row == null || row.getMatchId() == null) {
+    /**
+     * Force-records a match result bypassing the time window (admin only).
+     */
+    public String forceResultFromRow(Long matchId) {
+        errorMessage = null;
+        successMessage = null;
+        return saveResult(matchId, true);
+    }
+
+    private String saveResult(Long matchId, boolean force) {
+        if (matchId == null) {
             errorMessage = "Invalid match selection.";
             return null;
         }
-        if (row.getHomeScore() == null || row.getAwayScore() == null) {
+
+        ExternalContext ec = FacesContext.getCurrentInstance().getExternalContext();
+        Map<String, String> params = ec.getRequestParameterMap();
+        String hsRaw = params.get("hs_" + matchId);
+        String asRaw = params.get("as_" + matchId);
+
+        LOG.info("[saveResult] matchId=" + matchId + " force=" + force
+                + " hs_" + matchId + "='" + hsRaw + "' as_" + matchId + "='" + asRaw + "'");
+
+        if (hsRaw == null || hsRaw.isBlank() || asRaw == null || asRaw.isBlank()) {
             errorMessage = "Please enter both scores before saving the result.";
             return null;
         }
 
+        int hs, as;
         try {
-            // Pass authenticated user to service (service will check if admin)
-            matchService.updateResult(authBean.getUser(), row.getMatchId(), 
-                                    row.getHomeScore().intValue(), row.getAwayScore().intValue());
+            hs = Integer.parseInt(hsRaw.trim());
+            as = Integer.parseInt(asRaw.trim());
+        } catch (NumberFormatException e) {
+            errorMessage = "Scores must be whole numbers.";
+            return null;
+        }
+
+        if (hs < 0 || as < 0) {
+            errorMessage = "Scores cannot be negative.";
+            return null;
+        }
+
+        try {
+            Match match = matchService.getMatch(matchId);
+            if (force) {
+                matchService.forceUpdateResult(authBean.getUser(), matchId, hs, as);
+            } else {
+                matchService.updateResult(authBean.getUser(), matchId, hs, as);
+            }
             successMessage = "Result recorded for "
-                    + row.getMatch().getHomeTeam() + " vs " + row.getMatch().getAwayTeam()
-                    + ". Predictions recalculated!";
+                    + match.getHomeTeam() + " vs " + match.getAwayTeam()
+                    + " (" + hs + " – " + as + "). Predictions recalculated!";
             refreshMatchRows();
         } catch (SecurityException e) {
             errorMessage = "Authorization error: " + e.getMessage();
@@ -104,53 +148,15 @@ public class MatchBean implements Serializable {
         }
         return null;
     }
-
-    /**
-     * Deletes a match (ADMIN-ONLY).
-     * Calls MatchService.deleteMatch(adminUser, ...) which enforces the admin check.
-     */
     public String deleteMatch(Long matchId) {
         errorMessage = null;
         successMessage = null;
         try {
             Match match = matchService.getMatch(matchId);
-            // Pass authenticated user to service (service will check if admin)
             matchService.deleteMatch(authBean.getUser(), matchId);
             successMessage = "Match " + match.getHomeTeam() + " vs " + match.getAwayTeam() + " deleted.";
             refreshMatchRows();
         } catch (SecurityException e) {
-            errorMessage = "Authorization error: " + e.getMessage();
-        } catch (IllegalArgumentException e) {
-            errorMessage = e.getMessage();
-        }
-        return null;
-    }
-
-    /**
-     * Force-records a match result bypassing the time window (admin only).
-     * Useful when matches are scheduled in the future for demo purposes.
-     */
-    public String forceResultFromRow(MatchDashboardRow row) {
-        errorMessage = null;
-        successMessage = null;
-
-        if (row == null || row.getMatchId() == null) {
-            errorMessage = "Invalid match selection.";
-            return null;
-        }
-        if (row.getHomeScore() == null || row.getAwayScore() == null) {
-            errorMessage = "Please enter both scores.";
-            return null;
-        }
-
-        try {
-            matchService.forceUpdateResult(authBean.getUser(), row.getMatchId(),
-                    row.getHomeScore().intValue(), row.getAwayScore().intValue());
-            successMessage = "Result force-recorded for "
-                    + row.getMatch().getHomeTeam() + " vs " + row.getMatch().getAwayTeam()
-                    + ". Predictions recalculated!";
-            refreshMatchRows();
-        } catch (com.worldcup.security.SecurityException e) {
             errorMessage = "Authorization error: " + e.getMessage();
         } catch (IllegalArgumentException e) {
             errorMessage = e.getMessage();
@@ -270,8 +276,11 @@ public class MatchBean implements Serializable {
 
     private void refreshMatchRows() {
         matchRows = new ArrayList<>();
+        java.util.Set<Long> seen = new java.util.LinkedHashSet<>();
         matchService.getAllMatches().stream()
-                .sorted(Comparator.comparing(Match::getKickoffDate, Comparator.nullsLast(Comparator.naturalOrder())))
+                .filter(m -> seen.add(m.getId()))   // deduplicate by DB id
+                .sorted(Comparator.comparing(Match::getKickoffDate,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
                 .forEach(match -> matchRows.add(new MatchDashboardRow(match)));
     }
 

@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.Objects;
+import com.worldcup.config.GameConstants;
 
 /**
  * JPA Entity: Represents a football match in the World Cup tournament.
@@ -100,12 +101,24 @@ public class Match implements Serializable {
         return kickoffDate != null && !LocalDateTime.now().isBefore(kickoffDate);
     }
 
+    /**
+     * Returns true when predictions should be locked — i.e. less than
+     * {@link GameConstants#PREDICTION_LOCK_MINUTES} remain before kickoff,
+     * OR the match has already started / finished.
+     */
+    public boolean isPredictionLocked() {
+        if (kickoffDate == null) return false;
+        LocalDateTime lockTime = kickoffDate.minusMinutes(GameConstants.PREDICTION_LOCK_MINUTES);
+        return !LocalDateTime.now().isBefore(lockTime);
+    }
+
     public boolean isFinished() {
         return status == MatchStatus.FINISHED;
     }
 
     public boolean isPredictionOpen() {
-        if (status != MatchStatus.SCHEDULED || hasStarted()) return false;
+        if (status != MatchStatus.SCHEDULED) return false;
+        if (isPredictionLocked()) return false;
         if (predictionDeadline != null && LocalDateTime.now().isAfter(predictionDeadline)) return false;
         if (round != null && !round.isPredictionsAllowed()) return false;
         return true;

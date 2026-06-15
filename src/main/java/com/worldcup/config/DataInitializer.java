@@ -111,34 +111,43 @@ public class DataInitializer {
             "Burkina Faso", "South Africa", "Ecuador", "Peru", "Chile", "Paraguay", "Venezuela", "Costa Rica",
             "Panama", "Jamaica", "Honduras", "El Salvador", "New Zealand", "Wales", "Poland", "Switzerland"
         };
-        
-        List<Team> existing = teamService.getAllTeams();
-        if (existing.size() >= 48) {
-            LOG.info("Teams already seeded.");
-            return;
-        }
 
+        // Always re-fetch the latest snapshot so shortcode collision detection is accurate
+        List<Team> existing = teamService.getAllTeams();
+
+        // Collect both existing names AND existing shortcodes to avoid any collision
+        Set<String> existingNames = new HashSet<>();
         Set<String> usedShortCodes = new HashSet<>();
         for (Team t : existing) {
+            existingNames.add(t.getName().toLowerCase());
             if (t.getShortCode() != null) {
                 usedShortCodes.add(t.getShortCode().toUpperCase());
             }
         }
 
+        int created = 0;
         for (String tName : teamNames) {
+            // Skip teams that already exist by name (case-insensitive)
+            if (existingNames.contains(tName.toLowerCase())) {
+                continue;
+            }
             try {
-                boolean exists = existing.stream().anyMatch(t -> t.getName().equalsIgnoreCase(tName));
-                if (!exists) {
-                    Team t = new Team();
-                    t.setName(tName);
-                    t.setShortCode(generateUniqueShortCode(tName, usedShortCodes));
-                    teamService.createTeam(adminUser, t);
-                    usedShortCodes.add(t.getShortCode());
-                    LOG.info("Created team: " + tName);
-                }
+                String shortCode = generateUniqueShortCode(tName, usedShortCodes);
+                Team t = new Team();
+                t.setName(tName);
+                t.setShortCode(shortCode);
+                teamService.createTeam(adminUser, t);
+                usedShortCodes.add(shortCode);
+                existingNames.add(tName.toLowerCase());
+                LOG.info("Created team: " + tName + " (" + shortCode + ")");
+                created++;
             } catch (Exception e) {
                 LOG.warning("Skipped team '" + tName + "': " + e.getMessage());
             }
+        }
+
+        if (created == 0 && existing.size() >= teamNames.length) {
+            LOG.info("All " + teamNames.length + " teams already present, skipping seed.");
         }
     }
 

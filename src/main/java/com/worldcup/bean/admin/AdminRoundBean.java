@@ -4,6 +4,7 @@ import com.worldcup.bean.AuthBean;
 import com.worldcup.model.RoundStatus;
 import com.worldcup.model.TournamentRound;
 import com.worldcup.model.TournamentStage;
+import com.worldcup.service.ActivityLogService;
 import com.worldcup.service.TournamentRoundService;
 import jakarta.annotation.PostConstruct;
 import jakarta.faces.application.FacesMessage;
@@ -23,6 +24,7 @@ public class AdminRoundBean implements Serializable {
 
     @Inject private TournamentRoundService roundService;
     @Inject private AuthBean authBean;
+    @Inject private ActivityLogService activityLogService;
 
     private List<TournamentRound> rounds;
     private TournamentRound currentRound;
@@ -33,6 +35,10 @@ public class AdminRoundBean implements Serializable {
     }
 
     public void loadRounds() {
+        if (authBean.getUser() == null) {
+            rounds = java.util.Collections.emptyList();
+            return;
+        }
         rounds = roundService.getAllRounds();
     }
 
@@ -45,6 +51,11 @@ public class AdminRoundBean implements Serializable {
             if (currentRound.getId() == null) {
                 currentRound.setStatus(RoundStatus.OPEN);
                 roundService.createRound(authBean.getUser(), currentRound);
+                String username = authBean.getUser().getUsername();
+                activityLogService.log("CRE",
+                        "CRE | screen=admin-rounds.xhtml | user=" + username
+                        + " | detail=Round '" + currentRound.getStage() + "' created",
+                        username);
                 addMessage(FacesMessage.SEVERITY_INFO, "Round created successfully");
             } else {
                 // Save changes (not heavily supported yet except status/deadline via other methods)
@@ -64,6 +75,11 @@ public class AdminRoundBean implements Serializable {
             } else if (status == RoundStatus.CLOSED) {
                 roundService.closeRound(authBean.getUser(), id);
             }
+            String username = authBean.getUser().getUsername();
+            activityLogService.log("RND-UPD",
+                    "RND-UPD | screen=admin-rounds.xhtml | user=" + username
+                    + " | detail=roundId=" + id + " status changed to " + status,
+                    username);
             addMessage(FacesMessage.SEVERITY_INFO, "Round status updated to " + status);
             loadRounds();
         } catch (Exception e) {

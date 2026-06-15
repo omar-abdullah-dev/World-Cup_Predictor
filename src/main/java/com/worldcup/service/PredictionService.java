@@ -53,26 +53,21 @@ public class PredictionService {
         Match match = matchService.getMatch(matchId);
 
         if (match.isFinished())
-            throw new IllegalArgumentException(
-                "Cannot predict a finished match.");
+            throw new IllegalArgumentException("Cannot predict a finished match.");
 
-        /* DEPRECATED - replaced by round and deadline checks
-        if (!match.isPredictionOpen())
-            throw new IllegalArgumentException(
-                "Cannot submit or change a prediction after the match has started.");
-        */
-
-        if (match.getRound() != null && !match.getRound().isPredictionsAllowed()) {
+        if (match.getRound() != null && !match.getRound().isPredictionsAllowed())
             throw new IllegalArgumentException("Predictions are locked for this round.");
-        }
-        
-        if (match.getPredictionDeadline() != null && java.time.LocalDateTime.now().isAfter(match.getPredictionDeadline())) {
-            throw new IllegalArgumentException("Prediction deadline has passed for this match.");
-        }
 
-        if (match.hasStarted()) {
-            throw new IllegalArgumentException("Cannot submit or change a prediction after the match has started.");
-        }
+        if (match.getPredictionDeadline() != null
+                && java.time.LocalDateTime.now().isAfter(match.getPredictionDeadline()))
+            throw new IllegalArgumentException("Prediction deadline has passed for this match.");
+
+        // Lock predictions PREDICTION_LOCK_MINUTES before kickoff (or if already started)
+        if (match.isPredictionLocked())
+            throw new IllegalArgumentException(
+                "Predictions are locked — less than "
+                + com.worldcup.config.GameConstants.PREDICTION_LOCK_MINUTES
+                + " minutes remain before kick-off.");
 
         if (predictedHomeScore < 0 || predictedAwayScore < 0)
             throw new IllegalArgumentException("Predicted scores cannot be negative.");

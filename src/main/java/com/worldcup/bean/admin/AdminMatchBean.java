@@ -2,9 +2,11 @@ package com.worldcup.bean.admin;
 
 import com.worldcup.bean.AuthBean;
 import com.worldcup.model.Match;
+import com.worldcup.service.ActivityLogService;
 import com.worldcup.service.MatchService;
 import jakarta.annotation.PostConstruct;
 import jakarta.faces.application.FacesMessage;
+import jakarta.faces.context.ExternalContext;
 import jakarta.faces.context.FacesContext;
 import jakarta.faces.view.ViewScoped;
 import jakarta.inject.Inject;
@@ -15,15 +17,19 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.logging.Logger;
 
 @Named
 @ViewScoped
 public class AdminMatchBean implements Serializable {
 
     private static final long serialVersionUID = 1L;
+    private static final Logger LOG = Logger.getLogger(AdminMatchBean.class.getName());
 
     @Inject private MatchService matchService;
     @Inject private AuthBean authBean;
+    @Inject private ActivityLogService activityLogService;
 
     private List<MatchAdminRow> matchRows = new ArrayList<>();
     private String homeTeam;
@@ -39,14 +45,13 @@ public class AdminMatchBean implements Serializable {
     }
 
     public void loadMatches() {
+        if (authBean.getUser() == null) {
+            matchRows = new ArrayList<>();
+            return;
+        }
         matchRows = new ArrayList<>();
         for (Match m : matchService.getAllMatches()) {
-            MatchAdminRow row = new MatchAdminRow(m);
-            if (m.isFinished()) {
-                row.setHomeScore(m.getHomeScore());
-                row.setAwayScore(m.getAwayScore());
-            }
-            matchRows.add(row);
+            matchRows.add(new MatchAdminRow(m));
         }
     }
 
@@ -54,6 +59,11 @@ public class AdminMatchBean implements Serializable {
         try {
             LocalDateTime kickoff = LocalDateTime.parse(kickoffDate, DATE_FMT);
             matchService.createMatch(authBean.getUser(), homeTeam, awayTeam, kickoff);
+            String username = authBean.getUser().getUsername();
+            activityLogService.log("CRE",
+                    "CRE | screen=admin-matches.xhtml | user=" + username
+                    + " | detail=Match created: " + homeTeam + " vs " + awayTeam + " at " + kickoff,
+                    username);
             addMessage(FacesMessage.SEVERITY_INFO, "Match created successfully");
             homeTeam = awayTeam = kickoffDate = null;
             loadMatches();
@@ -63,23 +73,71 @@ public class AdminMatchBean implements Serializable {
     }
 
     /**
-     * Force-submits a result for any match, bypassing time window restrictions.
+     * Reads homeScore and awayScore directly from the raw HTTP request parameter map,
+     * keyed as "hs_<matchId>" and "as_<matchId>".
+     *
+     * Why: JSF EL cannot write back into a Map<Long,Integer> inside ui:repeat —
+     * during Apply Request Values the key arrives as a String and the put never fires.
+     * Reading raw params bypasses the JSF binding phase entirely and is always reliable.
      */
-    public void forceSubmitResult(MatchAdminRow row) {
-        if (row == null || row.getMatchId() == null) {
+    public void forceSubmitResult(Long matchId) {
+        if (matchId == null) {
+            LOG.warning("[forceSubmitResult] Rejected: matchId is null.");
             addMessage(FacesMessage.SEVERITY_ERROR, "Invalid match selection.");
             return;
         }
-        if (row.getHomeScore() == null || row.getAwayScore() == null) {
+
+        ExternalContext ec = FacesContext.getCurrentInstance().getExternalContext();
+        Map<String, String> params = ec.getRequestParameterMap();
+
+        String hsRaw = params.get("hs_" + matchId);
+        String asRaw = params.get("as_" + matchId);
+
+        LOG.info("[forceSubmitResult] matchId=" + matchId
+                + " | raw params hs_" + matchId + "='" + hsRaw
+                + "' as_" + matchId + "='" + asRaw + "'");
+
+        if (hsRaw == null || hsRaw.isBlank() || asRaw == null || asRaw.isBlank()) {
+            LOG.warning("[forceSubmitResult] Rejected for matchId=" + matchId
+                    + " — one or both score params missing/blank."
+                    + " hs_" + matchId + "='" + hsRaw + "'"
+                    + " as_" + matchId + "='" + asRaw + "'");
             addMessage(FacesMessage.SEVERITY_ERROR, "Please enter both scores.");
             return;
         }
+
+        Integer hs, as;
         try {
-            matchService.forceUpdateResult(authBean.getUser(), row.getMatchId(),
-                    row.getHomeScore(), row.getAwayScore());
+            hs = Integer.parseInt(hsRaw.trim());
+            as = Integer.parseInt(asRaw.trim());
+        } catch (NumberFormatException e) {
+            LOG.warning("[forceSubmitResult] Rejected for matchId=" + matchId
+                    + " — non-numeric score: hs='" + hsRaw + "' as='" + asRaw + "'");
+            addMessage(FacesMessage.SEVERITY_ERROR, "Scores must be whole numbers.");
+            return;
+        }
+
+        if (hs < 0 || as < 0) {
+            LOG.warning("[forceSubmitResult] Rejected for matchId=" + matchId
+                    + " — negative score: hs=" + hs + " as=" + as);
+            addMessage(FacesMessage.SEVERITY_ERROR, "Scores cannot be negative.");
+            return;
+        }
+
+        try {
+            matchService.forceUpdateResult(authBean.getUser(), matchId, hs, as);
+            LOG.info("[forceSubmitResult] Result saved: matchId=" + matchId
+                    + " score=" + hs + "-" + as);
+            String username = authBean.getUser().getUsername();
+            activityLogService.log("RES-SAV",
+                    "RES-SAV | screen=admin-matches.xhtml | user=" + username
+                    + " | detail=matchId=" + matchId + " score=" + hs + "-" + as,
+                    username);
             addMessage(FacesMessage.SEVERITY_INFO, "Result recorded successfully");
             loadMatches();
         } catch (Exception e) {
+            LOG.warning("[forceSubmitResult] Service error for matchId=" + matchId
+                    + ": " + e.getMessage());
             addMessage(FacesMessage.SEVERITY_ERROR, e.getMessage());
         }
     }
@@ -87,6 +145,11 @@ public class AdminMatchBean implements Serializable {
     public void deleteMatch(Long matchId) {
         try {
             matchService.deleteMatch(authBean.getUser(), matchId);
+            String username = authBean.getUser().getUsername();
+            activityLogService.log("MATCH-DEL",
+                    "MATCH-DEL | screen=admin-matches.xhtml | user=" + username
+                    + " | detail=matchId=" + matchId,
+                    username);
             addMessage(FacesMessage.SEVERITY_INFO, "Match deleted");
             loadMatches();
         } catch (Exception e) {
@@ -104,8 +167,7 @@ public class AdminMatchBean implements Serializable {
         if (parts.length >= 2) {
             return ("" + parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
         }
-        int end = Math.min(teamName.length(), 3);
-        return teamName.substring(0, end).toUpperCase();
+        return teamName.substring(0, Math.min(teamName.length(), 3)).toUpperCase();
     }
 
     public List<MatchAdminRow> getMatchRows() { return matchRows; }
@@ -116,28 +178,16 @@ public class AdminMatchBean implements Serializable {
     public String getKickoffDate() { return kickoffDate; }
     public void setKickoffDate(String kickoffDate) { this.kickoffDate = kickoffDate; }
 
+    // -----------------------------------------------------------------------
+    // Inner row — read-only wrapper; no mutable score fields here
+    // -----------------------------------------------------------------------
     public static class MatchAdminRow implements Serializable {
         private static final long serialVersionUID = 1L;
-
         private final Match match;
-        private Integer homeScore;
-        private Integer awayScore;
 
-        MatchAdminRow(Match match) {
-            this.match = match;
-        }
+        MatchAdminRow(Match match) { this.match = match; }
 
-        public Long getMatchId() {
-            return match.getId();
-        }
-
-        public Match getMatch() {
-            return match;
-        }
-
-        public Integer getHomeScore() { return homeScore; }
-        public void setHomeScore(Integer homeScore) { this.homeScore = homeScore; }
-        public Integer getAwayScore() { return awayScore; }
-        public void setAwayScore(Integer awayScore) { this.awayScore = awayScore; }
+        public Long getMatchId() { return match.getId(); }
+        public Match getMatch()  { return match; }
     }
 }

@@ -25,12 +25,25 @@ public class JpaGroupRepository implements GroupRepository {
 
     @Override
     public Optional<Group> findById(Long id) {
-        return Optional.ofNullable(em.find(Group.class, id));
+        List<Group> result = em.createQuery(
+                "SELECT DISTINCT g FROM Group g "
+                        + "LEFT JOIN FETCH g.teams "
+                        + "LEFT JOIN FETCH g.round "
+                        + "WHERE g.id = :id",
+                Group.class)
+                .setParameter("id", id)
+                .getResultList();
+        return result.isEmpty() ? Optional.empty() : Optional.of(result.get(0));
     }
 
     @Override
     public Optional<Group> findByName(String name) {
-        return em.createQuery("SELECT g FROM Group g WHERE g.name = :name", Group.class)
+        return em.createQuery(
+                "SELECT DISTINCT g FROM Group g "
+                        + "LEFT JOIN FETCH g.teams "
+                        + "LEFT JOIN FETCH g.round "
+                        + "WHERE g.name = :name",
+                Group.class)
                 .setParameter("name", name)
                 .getResultStream()
                 .findFirst();
@@ -38,8 +51,12 @@ public class JpaGroupRepository implements GroupRepository {
 
     @Override
     public List<Group> findAll() {
-        return em.createQuery("SELECT g FROM Group g ORDER BY g.name", Group.class)
-                .getResultList();
+        return em.createQuery(
+                "SELECT DISTINCT g FROM Group g "
+                        + "LEFT JOIN FETCH g.teams "
+                        + "LEFT JOIN FETCH g.round "
+                        + "ORDER BY g.name",
+                Group.class).getResultList();
     }
 
     @Override

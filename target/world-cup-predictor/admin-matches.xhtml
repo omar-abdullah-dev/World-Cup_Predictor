@@ -66,12 +66,12 @@
                             <span style="margin: 0 8px; color: #9ca3af;">|</span>
                             <span class="match-kickoff">
                                 <h:outputText value="#{row.match.kickoffDate}">
-                                    <f:convertDateTime type="localDateTime" pattern="yyyy-MM-dd HH:mm"/>
+                                    <f:convertDateTime type="localDateTime" pattern="dd MMM yyyy - HH:mm"/>
                                 </h:outputText>
                             </span>
                         </div>
                         <div class="match-dash-item-meta">
-                            <h:commandLink value="Delete Fixture" action="#{adminMatchBean.deleteMatch(row.match.id)}"
+                            <h:commandLink value="🗑 Delete" action="#{adminMatchBean.deleteMatch(row.match.id)}"
                                            onclick="return confirm('Are you sure you want to delete this match?');"
                                            rendered="#{not row.match.hasStarted() and row.match.status == 'SCHEDULED'}"
                                            styleClass="match-dash-delete-link"/>
@@ -91,21 +91,23 @@
 
                         <div class="match-dash-score-entry">
                             <h:panelGroup rendered="#{row.match.status != 'FINISHED' or row.match.canEditResult()}">
-                                <h:inputText id="hs" value="#{row.homeScore}" styleClass="match-dash-score-input">
-                                    <f:passThroughAttribute name="type" value="number"/>
-                                    <f:passThroughAttribute name="min" value="0"/>
-                                    <f:passThroughAttribute name="placeholder" value="0"/>
-                                    <f:convertNumber integerOnly="true"/>
-                                </h:inputText>
+                                <!--
+                                  Plain HTML inputs with name="hs_<id>" / "as_<id>".
+                                  JSF EL cannot write back into Map<Long,Integer> inside ui:repeat
+                                  (the key arrives as String during Apply Request Values and the put
+                                  never fires). Reading raw request params in the bean avoids this.
+                                -->
+                                <input type="number" min="0" placeholder="0"
+                                       name="hs_#{row.match.id}"
+                                       value="#{row.match.status == 'FINISHED' ? row.match.homeScore : ''}"
+                                       class="match-dash-score-input"/>
                                 <span class="match-dash-vs">:</span>
-                                <h:inputText id="as" value="#{row.awayScore}" styleClass="match-dash-score-input">
-                                    <f:passThroughAttribute name="type" value="number"/>
-                                    <f:passThroughAttribute name="min" value="0"/>
-                                    <f:passThroughAttribute name="placeholder" value="0"/>
-                                    <f:convertNumber integerOnly="true"/>
-                                </h:inputText>
+                                <input type="number" min="0" placeholder="0"
+                                       name="as_#{row.match.id}"
+                                       value="#{row.match.status == 'FINISHED' ? row.match.awayScore : ''}"
+                                       class="match-dash-score-input"/>
                                 <h:commandButton value="#{row.match.status == 'FINISHED' ? 'Update' : 'Save'}"
-                                                 action="#{adminMatchBean.forceSubmitResult(row)}"
+                                                 action="#{adminMatchBean.forceSubmitResult(row.match.id)}"
                                                  styleClass="btn btn-sm btn-success" style="margin-left: 10px;"/>
                             </h:panelGroup>
 
@@ -141,7 +143,7 @@
                         <h:panelGroup rendered="#{row.match.status == 'FINISHED' and not row.match.isResultLocked()}">
                             <span>Status: <strong>Scored</strong> (Grace window open. Edits allowed until
                                 <h:outputText value="#{row.match.resultEnteredAt.plusHours(4)}">
-                                    <f:convertDateTime type="localDateTime" pattern="yyyy-MM-dd HH:mm"/>
+                                    <f:convertDateTime type="localDateTime" pattern="dd MMM yyyy HH:mm"/>
                                 </h:outputText>)
                             </span>
                         </h:panelGroup>

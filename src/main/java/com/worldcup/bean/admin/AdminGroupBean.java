@@ -5,6 +5,7 @@ import com.worldcup.model.Group;
 import com.worldcup.model.RoundStatus;
 import com.worldcup.model.Team;
 import com.worldcup.model.TournamentRound;
+import com.worldcup.service.ActivityLogService;
 import com.worldcup.service.GroupService;
 import com.worldcup.service.MatchService;
 import com.worldcup.service.TeamService;
@@ -33,6 +34,7 @@ public class AdminGroupBean implements Serializable {
     @Inject private TournamentRoundService roundService;
     @Inject private MatchService matchService;
     @Inject private AuthBean authBean;
+    @Inject private ActivityLogService activityLogService;
 
     private List<Group> groups;
     private List<Team> allTeams;
@@ -123,9 +125,19 @@ public class AdminGroupBean implements Serializable {
             if (isNew) {
                 currentGroup.setStatus(RoundStatus.OPEN);
                 currentGroup = groupService.createGroup(authBean.getUser(), currentGroup);
+                String username = authBean.getUser().getUsername();
+                activityLogService.log("GRP-CRE",
+                        "GRP-CRE | screen=admin-groups.xhtml | user=" + username
+                        + " | detail=Group '" + currentGroup.getName() + "' created",
+                        username);
                 addMessage(FacesMessage.SEVERITY_INFO, "Group created successfully.");
             } else {
                 currentGroup = groupService.updateGroup(authBean.getUser(), currentGroup);
+                String username = authBean.getUser().getUsername();
+                activityLogService.log("GRP-UPD",
+                        "GRP-UPD | screen=admin-groups.xhtml | user=" + username
+                        + " | detail=Group '" + currentGroup.getName() + "' updated",
+                        username);
                 addMessage(FacesMessage.SEVERITY_INFO, "Group updated successfully.");
             }
 
@@ -158,6 +170,11 @@ public class AdminGroupBean implements Serializable {
     public void deleteGroup(Long id) {
         try {
             groupService.deleteGroup(authBean.getUser(), id);
+            String username = authBean.getUser().getUsername();
+            activityLogService.log("GRP-DEL",
+                    "GRP-DEL | screen=admin-groups.xhtml | user=" + username
+                    + " | detail=groupId=" + id + " deleted",
+                    username);
             addMessage(FacesMessage.SEVERITY_INFO, "Group deleted successfully.");
             loadGroups();
         } catch (Exception e) {
@@ -168,6 +185,11 @@ public class AdminGroupBean implements Serializable {
     public void updateStatus(Long id, RoundStatus status) {
         try {
             groupService.updateGroupStatus(authBean.getUser(), id, status);
+            String username = authBean.getUser().getUsername();
+            activityLogService.log("GRP-UPD",
+                    "GRP-UPD | screen=admin-groups.xhtml | user=" + username
+                    + " | detail=groupId=" + id + " status changed to " + status,
+                    username);
             addMessage(FacesMessage.SEVERITY_INFO, "Group status updated.");
             loadGroups();
         } catch (Exception e) {

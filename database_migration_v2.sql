@@ -91,3 +91,4 @@ CREATE INDEX idx_match_group ON matches(group_id);
 CREATE INDEX idx_match_stage ON matches(stage);
 CREATE INDEX idx_prediction_updated ON predictions(updated_at);
 CREATE INDEX idx_user_ad_username ON users(ad_username);
+

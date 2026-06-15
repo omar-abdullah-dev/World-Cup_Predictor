@@ -114,10 +114,10 @@
                         <tbody>
                             <ui:repeat value="#{adminGroupBean.groups}" var="g">
                                 <tr>
-                                    <td><strong>Group <h:outputText value="#{g.name}"/></strong></td>
+                                    <td><strong><h:outputText value="#{g.name}"/></strong></td>
                                     <td>
                                         <ui:repeat value="#{g.teams}" var="t" varStatus="ts">
-                                            <span class="team-initials-badge" title="#{t.name}" style="font-size:0.8em; padding: 2px 5px; margin-right: 4px;">#{t.shortCode}</span>
+                                            <span class="team-initials-badge" title="#{t.name}" style="font-size:0.8em; padding: 2px 5px; margin-right: 4px;"><h:outputText value="#{t.shortCode}"/></span>
                                         </ui:repeat>
                                         <h:panelGroup rendered="#{empty g.teams}">
                                             <span style="color:#9ca3af; font-style:italic; font-size:0.9em;">No teams</span>
