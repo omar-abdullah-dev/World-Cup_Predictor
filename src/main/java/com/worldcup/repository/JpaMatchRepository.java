@@ -85,4 +85,14 @@ public class JpaMatchRepository implements MatchRepository {
         Match match = em.find(Match.class, id);
         if (match != null) em.remove(match);
     }
+
+    @Override
+    public Optional<Match> findByExternalMatchId(Long externalMatchId) {
+        return em.createQuery(
+                "SELECT m FROM Match m WHERE m.externalMatchId = :eid",
+                Match.class)
+                .setParameter("eid", externalMatchId)
+                .getResultStream()
+                .findFirst();
+    }
 }

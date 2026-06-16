@@ -12,4 +12,6 @@ public interface MatchRepository {
     List<Match> findByGroup(Long groupId);
     Match update(Match match);
     void deleteById(Long id);
+    /** Find by WorldCupAPI external fixture ID — used for sync upserts. */
+    Optional<Match> findByExternalMatchId(Long externalMatchId);
 }

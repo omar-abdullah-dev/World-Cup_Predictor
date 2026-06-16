@@ -78,6 +78,31 @@ public class Match implements Serializable {
     @Column(nullable = false)
     private MatchStatus status;
 
+    // ── WorldCupAPI integration fields ──────────────────────────────────────
+    /** External fixture ID from WorldCupAPI — used as the sync key. */
+    @Column(name = "external_match_id", unique = true)
+    private Long externalMatchId;
+
+    /** Venue / stadium name from the API. */
+    @Column(name = "venue", length = 200)
+    private String venue;
+
+    /** Home team's numeric ID in WorldCupAPI. */
+    @Column(name = "home_team_api_id")
+    private Integer homeTeamApiId;
+
+    /** Away team's numeric ID in WorldCupAPI. */
+    @Column(name = "away_team_api_id")
+    private Integer awayTeamApiId;
+
+    /** URL to the home team's logo served by WorldCupAPI CDN. */
+    @Column(name = "home_team_logo", length = 500)
+    private String homeTeamLogo;
+
+    /** URL to the away team's logo served by WorldCupAPI CDN. */
+    @Column(name = "away_team_logo", length = 500)
+    private String awayTeamLogo;
+
     public Match() {
         this.status = MatchStatus.SCHEDULED;
     }
@@ -240,6 +265,25 @@ public class Match implements Serializable {
 
     public LocalDateTime getResultLockedAt() { return resultLockedAt; }
     public void setResultLockedAt(LocalDateTime resultLockedAt) { this.resultLockedAt = resultLockedAt; }
+
+    // ── WorldCupAPI field accessors ──────────────────────────────────────────
+    public Long getExternalMatchId() { return externalMatchId; }
+    public void setExternalMatchId(Long externalMatchId) { this.externalMatchId = externalMatchId; }
+
+    public String getVenue() { return venue; }
+    public void setVenue(String venue) { this.venue = venue; }
+
+    public Integer getHomeTeamApiId() { return homeTeamApiId; }
+    public void setHomeTeamApiId(Integer homeTeamApiId) { this.homeTeamApiId = homeTeamApiId; }
+
+    public Integer getAwayTeamApiId() { return awayTeamApiId; }
+    public void setAwayTeamApiId(Integer awayTeamApiId) { this.awayTeamApiId = awayTeamApiId; }
+
+    public String getHomeTeamLogo() { return homeTeamLogo; }
+    public void setHomeTeamLogo(String homeTeamLogo) { this.homeTeamLogo = homeTeamLogo; }
+
+    public String getAwayTeamLogo() { return awayTeamLogo; }
+    public void setAwayTeamLogo(String awayTeamLogo) { this.awayTeamLogo = awayTeamLogo; }
 
     @Override
     public boolean equals(Object o) {

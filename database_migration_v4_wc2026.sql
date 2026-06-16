@@ -29,6 +29,21 @@
 -- GROUP BY stage
 -- ORDER BY stage;
 
+-- UPDATE matches
+-- SET kickoff_date = NOW() + INTERVAL '3 hours'
+-- WHERE id = 51;
+
+-- -- 1. Fix the round deadline (run once, permanent fix)
+-- UPDATE tournament_rounds
+-- SET predictiondeadline = '2026-06-28 01:55:00'
+-- WHERE stage = 'GROUP_STAGE';
+--
+-- -- 2. Push France vs Senegal kickoff forward for testing
+-- UPDATE matches
+-- SET kickoff_date = NOW() + INTERVAL '3 hours'
+-- WHERE id = 51;
+
+
 
 BEGIN;
 
