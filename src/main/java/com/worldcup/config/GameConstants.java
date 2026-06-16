@@ -18,9 +18,9 @@ public final class GameConstants {
      * A user can update their prediction any number of times until this
      * many minutes remain before the match starts.
      *
-     * Default: 5 minutes.
+     * Default: 10 minutes.
      */
-    public static final int PREDICTION_LOCK_MINUTES = 5;
+    public static final int PREDICTION_LOCK_MINUTES = 10;
 
     // -----------------------------------------------------------------------
     // Result editing window
