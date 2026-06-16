@@ -1,13 +1,17 @@
 package com.worldcup.bean;
 
 import com.worldcup.model.User;
+import com.worldcup.model.UserSession;
 import com.worldcup.security.AuthenticationService;
 import com.worldcup.security.SecurityException;
 import com.worldcup.service.ActivityLogService;
+import com.worldcup.service.UserSessionService;
 import jakarta.enterprise.context.SessionScoped;
 import jakarta.faces.context.FacesContext;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 
 import java.io.Serializable;
 import java.util.logging.Level;
@@ -36,12 +40,16 @@ public class AuthBean implements Serializable {
 
     @Inject private AuthenticationService authenticationService;
     @Inject private ActivityLogService activityLogService;
+    @Inject private UserSessionService userSessionService;
 
     private User user;
     private String username;
     private String password;
     private String errorMessage;
     private String successMessage;
+
+    /** DB session record for the current login — stored in the HTTP session. */
+    private UserSession currentSession;
 
     /**
      * Handles login form submission.
@@ -70,12 +78,25 @@ public class AuthBean implements Serializable {
             
             // Clear sensitive data
             this.password = null;
-            
+
+            // ── Session tracking ──────────────────────────────────────────
+            FacesContext fc = FacesContext.getCurrentInstance();
+            HttpServletRequest req = (HttpServletRequest) fc.getExternalContext().getRequest();
+            HttpSession httpSession = req.getSession(true);
+            String sessionId  = httpSession.getId();
+            String ipAddress  = getClientIp(req);
+            String userAgent  = req.getHeader("User-Agent");
+
+            this.currentSession = userSessionService.onLogin(
+                    user.getId(), user.getUsername(), sessionId, ipAddress, userAgent);
+
             LOGGER.info("User logged in: " + user.getUsername());
             activityLogService.log("LOGIN",
-                    "LOGIN | screen=login.xhtml | user=" + user.getUsername()
-                    + " | detail=Login successful",
-                    user.getUsername());
+                    "LOGIN | user=" + user.getUsername()
+                    + " | ip=" + ipAddress + " | ua=" + abbreviate(userAgent, 80),
+                    user.getUsername(),
+                    user.getId(), sessionId, ipAddress, userAgent,
+                    null, null, null);
             
             // Redirect to dashboard
             return "/index.xhtml?faces-redirect=true";
@@ -98,15 +119,30 @@ public class AuthBean implements Serializable {
     public void logout() {
         if (user != null) {
             LOGGER.info("User logged out: " + user.getUsername());
-            activityLogService.log("LOGOUT",
-                    "LOGOUT | screen=login.xhtml | user=" + user.getUsername()
-                    + " | detail=User logged out",
-                    user.getUsername());
+            // ── Session tracking ──────────────────────────────────────────
+            try {
+                FacesContext fc2 = FacesContext.getCurrentInstance();
+                HttpServletRequest req2 = (HttpServletRequest) fc2.getExternalContext().getRequest();
+                HttpSession httpSess = req2.getSession(false);
+                String sessionId = httpSess != null ? httpSess.getId() : "unknown";
+                String ipAddress = getClientIp(req2);
+                String userAgent = req2.getHeader("User-Agent");
+
+                userSessionService.onLogout(sessionId);
+                activityLogService.log("LOGOUT",
+                        "LOGOUT | user=" + user.getUsername() + " | ip=" + ipAddress,
+                        user.getUsername(),
+                        user.getId(), sessionId, ipAddress, userAgent,
+                        null, null, null);
+            } catch (Exception ex) {
+                LOGGER.log(Level.WARNING, "Error recording logout audit", ex);
+            }
         }
-        this.user = null;
-        this.username = null;
-        this.password = null;
-        this.errorMessage = null;
+        this.user           = null;
+        this.currentSession = null;
+        this.username       = null;
+        this.password       = null;
+        this.errorMessage   = null;
         this.successMessage = null;
 
         try {
@@ -196,4 +232,40 @@ public class AuthBean implements Serializable {
 
     public String getSuccessMessage() { return successMessage; }
     public void setSuccessMessage(String msg) { this.successMessage = msg; }
+
+    /** The DB-tracked session for this login — may be null before login. */
+    public UserSession getCurrentSession() { return currentSession; }
+
+    /** Returns the current HTTP session ID, or null if no session exists. */
+    public String getHttpSessionId() {
+        try {
+            FacesContext fc = FacesContext.getCurrentInstance();
+            if (fc == null) return null;
+            HttpServletRequest req = (HttpServletRequest) fc.getExternalContext().getRequest();
+            HttpSession s = req.getSession(false);
+            return s != null ? s.getId() : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** Returns the browser token to be injected into the page for tab-conflict detection. */
+    public String getBrowserToken() {
+        return currentSession != null ? currentSession.getBrowserToken() : null;
+    }
+
+    // ── Private helpers ───────────────────────────────────────────────────
+
+    private String getClientIp(HttpServletRequest req) {
+        String xff = req.getHeader("X-Forwarded-For");
+        if (xff != null && !xff.isBlank()) {
+            return xff.split(",")[0].trim();
+        }
+        return req.getRemoteAddr();
+    }
+
+    private String abbreviate(String s, int max) {
+        if (s == null) return "";
+        return s.length() <= max ? s : s.substring(0, max) + "…";
+    }
 }

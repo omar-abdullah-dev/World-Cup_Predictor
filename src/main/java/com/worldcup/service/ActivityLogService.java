@@ -32,7 +32,7 @@ public class ActivityLogService {
     private EntityManager em;
 
     /**
-     * Persists one activity log entry.
+     * Persists one activity log entry (original simple signature — backward compatible).
      *
      * @param opmaj      operation name   (e.g. "LOGIN")
      * @param transmaj   detail text      (e.g. "User logged in from 192.168.1.1")
@@ -48,6 +48,40 @@ public class ActivityLogService {
             // Never let logging break the caller
             LOG.log(Level.WARNING,
                     "[ActivityLogService] Failed to persist log entry"
+                    + " opmaj=" + opmaj + " profile=" + profilemaj
+                    + ": " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Persists a fully-enriched audit entry with session context.
+     *
+     * @param opmaj      operation name (LOGIN, LOGOUT, PREDICTION_CREATED, PREDICTION_UPDATED, …)
+     * @param transmaj   detail text
+     * @param profilemaj actor username
+     * @param userId     actor user ID
+     * @param sessionId  HTTP session ID
+     * @param ipAddress  client IP
+     * @param userAgent  browser user-agent
+     * @param matchId    related match ID (null for non-prediction events)
+     * @param oldValue   previous prediction score string, e.g. "1-0" (null for CREATE)
+     * @param newValue   new prediction score string, e.g. "2-1"
+     */
+    @Transactional
+    public void log(String opmaj, String transmaj, String profilemaj,
+                    Long userId, String sessionId,
+                    String ipAddress, String userAgent,
+                    Long matchId, String oldValue, String newValue) {
+        try {
+            SystemActivityLog entry = new SystemActivityLog(
+                    opmaj, transmaj, profilemaj,
+                    userId, sessionId, ipAddress, userAgent,
+                    matchId, oldValue, newValue);
+            em.persist(entry);
+            em.flush();
+        } catch (Exception e) {
+            LOG.log(Level.WARNING,
+                    "[ActivityLogService] Failed to persist enriched log entry"
                     + " opmaj=" + opmaj + " profile=" + profilemaj
                     + ": " + e.getMessage(), e);
         }
@@ -82,10 +116,38 @@ public class ActivityLogService {
      */
     @Transactional
     public List<SystemActivityLog> findByOperation(String opmaj) {
+        return findFiltered(null, opmaj);
+    }
+
+    /**
+     * Returns log entries filtered by profile and/or operation type (nulls ignored), newest-first.
+     */
+    @Transactional
+    public List<SystemActivityLog> findFiltered(String profilemaj, String opmaj) {
+        StringBuilder jpql = new StringBuilder(
+                "SELECT l FROM SystemActivityLog l WHERE 1=1");
+        if (profilemaj != null && !profilemaj.isBlank())
+            jpql.append(" AND LOWER(l.profilemaj) LIKE LOWER(:profile)");
+        if (opmaj != null && !opmaj.isBlank())
+            jpql.append(" AND l.opmaj = :op");
+        jpql.append(" ORDER BY l.datemaj DESC");
+
+        var query = em.createQuery(jpql.toString(), SystemActivityLog.class);
+        if (profilemaj != null && !profilemaj.isBlank())
+            query.setParameter("profile", "%" + profilemaj + "%");
+        if (opmaj != null && !opmaj.isBlank())
+            query.setParameter("op", opmaj);
+
+        return query.getResultList();
+    }
+
+    /** Returns the most recent N log entries. */
+    @Transactional
+    public List<SystemActivityLog> findRecent(int limit) {
         return em.createQuery(
-                "SELECT l FROM SystemActivityLog l WHERE l.opmaj = :op ORDER BY l.datemaj DESC",
+                "SELECT l FROM SystemActivityLog l ORDER BY l.datemaj DESC",
                 SystemActivityLog.class)
-                .setParameter("op", opmaj)
+                .setMaxResults(limit)
                 .getResultList();
     }
 }

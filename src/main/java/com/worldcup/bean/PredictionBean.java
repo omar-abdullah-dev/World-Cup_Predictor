@@ -83,22 +83,31 @@ public class PredictionBean implements Serializable {
         Long userId = authBean.getCurrentUserId();
         try {
             boolean updating = predictionService.hasPredictionForMatch(userId, row.getMatchId());
+
+            // Collect session context for audit
+            String sessionId = authBean.getHttpSessionId();
+            String ipAddress = null;
+            String userAgent = null;
+            try {
+                jakarta.servlet.http.HttpServletRequest req =
+                    (jakarta.servlet.http.HttpServletRequest)
+                    jakarta.faces.context.FacesContext.getCurrentInstance()
+                        .getExternalContext().getRequest();
+                String xff = req.getHeader("X-Forwarded-For");
+                ipAddress = (xff != null && !xff.isBlank()) ? xff.split(",")[0].trim() : req.getRemoteAddr();
+                userAgent = req.getHeader("User-Agent");
+            } catch (Exception ignored) {}
+
             predictionService.submitPrediction(userId, row.getMatchId(),
-                    row.getHomeScore(), row.getAwayScore());
+                    row.getHomeScore(), row.getAwayScore(),
+                    sessionId, ipAddress, userAgent);
+
             Match match = matchService.getMatch(row.getMatchId());
             String action = updating ? "Updated" : "Saved";
             successMessage = action + " prediction: "
                     + match.getHomeTeam() + " "
                     + row.getHomeScore() + " \u2013 " + row.getAwayScore()
                     + " " + match.getAwayTeam();
-            String opCode = updating ? "PRED-UPD" : "PRED-SUB";
-            String username = authBean.getCurrentUsername();
-            activityLogService.log(opCode,
-                    opCode + " | screen=predictions.xhtml | user=" + username
-                    + " | detail=Match#" + row.getMatchId()
-                    + " " + match.getHomeTeam() + " " + row.getHomeScore()
-                    + "-" + row.getAwayScore() + " " + match.getAwayTeam(),
-                    username);
             refreshOpenRows();
         } catch (IllegalArgumentException e) {
             errorMessage = e.getMessage();

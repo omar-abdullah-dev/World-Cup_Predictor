@@ -42,6 +42,8 @@
                                 styleClass="nav-link#{navBean.isActive('admin-groups') ? ' active' : ''}"/>
                         <h:link outcome="admin-matches" value="Admin Matches"
                                 styleClass="nav-link#{navBean.isActive('admin-matches') ? ' active' : ''}"/>
+                        <h:link outcome="admin-audit" value="&#128274; Audit Log"
+                                styleClass="nav-link#{navBean.isActive('admin-audit') ? ' active' : ''}"/>
                     </h:panelGroup>
                     <h:panelGroup rendered="#{authBean.loggedIn}" layout="inline">
                         <h:form styleClass="nav-logout-form" style="display:inline">
@@ -63,5 +65,27 @@
             <p>World Cup Predictor &#8212; Clean Architecture with Jakarta Faces (JSF)</p>
         </footer>
     </div>
+
+    <!-- Multi-tab / session-displacement detection — runs on every page -->
+    <h:panelGroup rendered="#{authBean.loggedIn}" layout="block">
+        <script type="text/javascript">
+        //<![CDATA[
+        (function() {
+            var serverToken = '#{authBean.browserToken}';
+            if (!serverToken || serverToken === 'null') return;
+            var KEY = 'wcp_browser_token';
+            var stored = localStorage.getItem(KEY);
+            if (!stored) {
+                localStorage.setItem(KEY, serverToken);
+            } else if (stored !== serverToken) {
+                // A new login displaced this session — another browser or tab took over
+                localStorage.removeItem(KEY);
+                alert('Your account was logged in from another location.\nYou will be redirected to the login page.');
+                window.location.href = '#{facesContext.externalContext.requestContextPath}/login.xhtml';
+            }
+        })();
+        //]]>
+        </script>
+    </h:panelGroup>
 </h:body>
 </html>
