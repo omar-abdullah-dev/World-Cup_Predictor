@@ -51,6 +51,9 @@ public class AuthBean implements Serializable {
     /** DB session record for the current login — stored in the HTTP session. */
     private UserSession currentSession;
 
+    /** Browser token — plain String copy so it survives serialization without a JPA proxy. */
+    private String browserToken;
+
     /**
      * Handles login form submission.
      * Validates username/password and stores authenticated User in session.
@@ -89,6 +92,9 @@ public class AuthBean implements Serializable {
 
             this.currentSession = userSessionService.onLogin(
                     user.getId(), user.getUsername(), sessionId, ipAddress, userAgent);
+            // Store token as plain String — JPA proxy is not safe to serialize across requests
+            this.browserToken = this.currentSession != null
+                    ? this.currentSession.getBrowserToken() : null;
 
             LOGGER.info("User logged in: " + user.getUsername());
             activityLogService.log("LOGIN",
@@ -140,6 +146,7 @@ public class AuthBean implements Serializable {
         }
         this.user           = null;
         this.currentSession = null;
+        this.browserToken   = null;
         this.username       = null;
         this.password       = null;
         this.errorMessage   = null;
@@ -251,7 +258,7 @@ public class AuthBean implements Serializable {
 
     /** Returns the browser token to be injected into the page for tab-conflict detection. */
     public String getBrowserToken() {
-        return currentSession != null ? currentSession.getBrowserToken() : null;
+        return browserToken;
     }
 
     // ── Private helpers ───────────────────────────────────────────────────
