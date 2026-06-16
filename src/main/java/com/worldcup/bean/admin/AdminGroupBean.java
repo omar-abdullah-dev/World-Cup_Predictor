@@ -17,6 +17,7 @@ import jakarta.faces.view.ViewScoped;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -27,6 +28,7 @@ import java.util.stream.Collectors;
 @ViewScoped
 public class AdminGroupBean implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     @Inject private GroupService groupService;

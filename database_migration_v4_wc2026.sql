@@ -443,7 +443,7 @@ SELECT v.ht,
        v.as2, CASE WHEN v.st='FINISHED' THEN v.ko::TIMESTAMP END,
        ht.id, at.id, r.id, grp.id
 FROM (VALUES
-  ('Spain',        'Cape Verde',   '2026-06-15 16:00:00','SCHEDULED',NULL::INTEGER,NULL::INTEGER),
+  ('Spain',        'Cape Verde',   '2026-06-15 19:00:00','SCHEDULED',NULL::INTEGER,NULL::INTEGER),
   ('Saudi Arabia', 'Uruguay',      '2026-06-15 22:00:00','SCHEDULED',NULL::INTEGER,NULL::INTEGER),
   ('Spain',        'Saudi Arabia', '2026-06-21 16:00:00','SCHEDULED',NULL::INTEGER,NULL::INTEGER),
   ('Uruguay',      'Cape Verde',   '2026-06-21 22:00:00','SCHEDULED',NULL::INTEGER,NULL::INTEGER),
