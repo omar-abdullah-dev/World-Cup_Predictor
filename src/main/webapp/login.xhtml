@@ -190,11 +190,12 @@
     <script type="text/javascript">
     //<![CDATA[
     (function() {
-        // Clear the multi-browser detection token — will be re-set on next successful login
+        // Clear multi-browser token — will be re-set on next successful login
         localStorage.removeItem('wcp_browser_token');
-        localStorage.removeItem('wcp_login_time');
-        // Clear any tab tokens too
-        sessionStorage.removeItem('wcp_tab_token');
+        // Release the tab lock so a new tab can claim it after login
+        localStorage.removeItem('wcp_tab_lock');
+        // Clear per-tab ID
+        sessionStorage.removeItem('wcp_tab_id');
     })();
     //]]>
     </script>

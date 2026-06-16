@@ -66,142 +66,201 @@
         </footer>
     </div>
 
-    <!-- Session enforcement script — runs on every page for logged-in users.
-         
-         Multi-browser detection: localStorage token vs server token.
-           - localStorage is shared across all tabs of the same origin in the same browser.
-           - When user logs in on a NEW browser, server issues a NEW browserToken.
-           - The old browser still has the old token in localStorage.
-           - On next page load/navigate: old token != new token → conflict detected → redirect.
-         
-         Multi-tab detection: BroadcastChannel API.
-           - On login, Tab 1 stores a unique tabToken in sessionStorage (per-tab, not shared).
-           - Tab 1 broadcasts its tabToken on the 'wcp_tab_sync' channel.
-           - Any other tab that receives a different tabToken knows a conflict exists.
-           - The newer tab wins; older tabs are redirected to login.
-    -->
+    <!-- ═══════════════════════════════════════════════════════════════════
+         Session Enforcement Script
+         Runs on every page load for every logged-in user (user AND admin).
+
+         LAYER 1 — Multi-browser detection (localStorage, shared across tabs)
+           browserToken is issued by the server on every fresh login.
+           localStorage persists across tabs in the same browser.
+           When user logs in on Browser B, token changes → Browser A detects mismatch
+           on next page load or within 15 s heartbeat → redirected to login.
+
+         LAYER 2 — Multi-tab / single-tab enforcement (localStorage leader lock)
+           Only ONE tab may hold the active-tab lock at a time.
+           Lock key: wcp_tab_lock  →  value: { tabId, renewedAt }
+           Lock TTL: 4 seconds (tab must renew every 2 s to keep ownership).
+
+           On page load:
+             a) If no lock exists → claim it (I am the first tab).
+             b) If lock exists AND tabId == mine → I already own it, renew.
+             c) If lock exists AND tabId != mine AND lock is fresh (< 4 s old)
+                → CONFLICT: another tab is alive → I must leave NOW.
+             d) If lock exists AND tabId != mine AND lock is STALE (≥ 4 s old)
+                → The other tab closed without releasing → I can claim it.
+
+         LAYER 3 — Server heartbeat every 15 s
+           Polls /session-heartbeat to detect server-side displacement.
+    ═══════════════════════════════════════════════════════════════════ -->
     <h:panelGroup rendered="#{authBean.loggedIn}" layout="block">
         <script type="text/javascript">
         //<![CDATA[
         (function() {
-            var serverBrowserToken = '#{authBean.browserToken}';
-            var LS_KEY  = 'wcp_browser_token';   // localStorage — shared across tabs, same browser
-            var SS_KEY  = 'wcp_tab_token';        // sessionStorage — isolated per tab
-            var LOGIN_TIME_KEY = 'wcp_login_time';
 
-            if (!serverBrowserToken || serverBrowserToken === 'null'
-                    || serverBrowserToken === '') return;
+            // ── Constants ────────────────────────────────────────────────
+            var SERVER_TOKEN  = '#{authBean.browserToken}';
+            var LS_BROWSER    = 'wcp_browser_token';   // multi-browser token
+            var LS_TAB_LOCK   = 'wcp_tab_lock';        // single-tab leader lock
+            var LOCK_TTL_MS   = 4000;   // lock expires after 4 s of silence
+            var RENEW_MS      = 2000;   // active tab renews every 2 s
+            var HEARTBEAT_MS  = 15000;  // server-side poll every 15 s
 
-            // ── 1. Multi-browser detection via localStorage ──────────────
-            var storedBrowserToken = localStorage.getItem(LS_KEY);
+            if (!SERVER_TOKEN || SERVER_TOKEN === 'null' || SERVER_TOKEN === '') return;
+
+            // Generate a unique ID for THIS tab (survives page navigations within same tab
+            // because we keep it in sessionStorage which is per-tab)
+            var MY_TAB_ID = sessionStorage.getItem('wcp_tab_id');
+            if (!MY_TAB_ID) {
+                MY_TAB_ID = 'tab_' + Math.random().toString(36).substr(2, 9)
+                                   + '_' + Date.now();
+                sessionStorage.setItem('wcp_tab_id', MY_TAB_ID);
+            }
+
+            var loginUrl = window.location.origin
+                + window.location.pathname.substring(
+                    0, window.location.pathname.lastIndexOf('/') + 1)
+                + 'login.xhtml';
+
+            function doRedirect(reason) {
+                // Stop the renew interval before leaving
+                if (window._wcpRenewTimer) clearInterval(window._wcpRenewTimer);
+                window.location.replace(loginUrl + '?reason=' + reason);
+            }
+
+            // ── LAYER 1: Multi-browser detection ────────────────────────
+            var storedBrowserToken = localStorage.getItem(LS_BROWSER);
             if (!storedBrowserToken) {
-                // First login in this browser — store it
-                localStorage.setItem(LS_KEY, serverBrowserToken);
-                localStorage.setItem(LOGIN_TIME_KEY, Date.now().toString());
-            } else if (storedBrowserToken !== serverBrowserToken) {
-                // This browser has a stale token — the account logged in elsewhere
-                localStorage.setItem(LS_KEY, serverBrowserToken);
-                localStorage.setItem(LOGIN_TIME_KEY, Date.now().toString());
-                // Clear this tab's token so the redirect doesn't loop
-                sessionStorage.removeItem(SS_KEY);
-                alert('Your account was signed in from another location.\nYou will be redirected to the login page.');
-                window.location.replace(
-                    window.location.origin
-                    + window.location.pathname.replace(/\/[^\/]*$/, '')
-                    + '/login.xhtml?reason=session_conflict');
+                localStorage.setItem(LS_BROWSER, SERVER_TOKEN);
+            } else if (storedBrowserToken !== SERVER_TOKEN) {
+                // Server issued a new token → account logged in on another browser
+                localStorage.setItem(LS_BROWSER, SERVER_TOKEN);
+                sessionStorage.removeItem('wcp_tab_id');
+                alert('Your account has been signed in from another location.\n' +
+                      'You will be redirected to the login page.');
+                doRedirect('session_conflict');
                 return;
             }
 
-            // ── 2. Multi-tab detection via sessionStorage + BroadcastChannel ──
-            var myTabToken = sessionStorage.getItem(SS_KEY);
-            if (!myTabToken) {
-                // This is a fresh tab for this session — assign it the server's token as tab ID
-                myTabToken = serverBrowserToken + '_' + Date.now();
-                sessionStorage.setItem(SS_KEY, myTabToken);
+            // ── LAYER 2: Single-tab leader lock ──────────────────────────
+
+            function readLock() {
+                try {
+                    var raw = localStorage.getItem(LS_TAB_LOCK);
+                    return raw ? JSON.parse(raw) : null;
+                } catch(e) { return null; }
             }
 
-            if (typeof BroadcastChannel !== 'undefined') {
-                var channel = new BroadcastChannel('wcp_tab_sync');
+            function writeLock() {
+                localStorage.setItem(LS_TAB_LOCK,
+                    JSON.stringify({ tabId: MY_TAB_ID, renewedAt: Date.now() }));
+            }
 
-                // Announce this tab is alive
-                channel.postMessage({ type: 'TAB_ALIVE', tabToken: myTabToken, ts: Date.now() });
+            function releaseLock() {
+                var lock = readLock();
+                // Only release if I own it
+                if (lock && lock.tabId === MY_TAB_ID) {
+                    localStorage.removeItem(LS_TAB_LOCK);
+                }
+            }
 
-                channel.onmessage = function(event) {
-                    var msg = event.data;
-                    if (!msg || !msg.type) return;
+            function isLockStale(lock) {
+                return !lock || (Date.now() - lock.renewedAt) >= LOCK_TTL_MS;
+            }
 
-                    if (msg.type === 'TAB_ALIVE' && msg.tabToken !== myTabToken) {
-                        // Another tab is also alive — this is a conflict.
-                        // The newer tab (higher ts) wins; older tab must leave.
-                        var myTs = parseInt(myTabToken.split('_').pop(), 10) || 0;
-                        var theirTs = msg.ts || 0;
-                        if (myTs < theirTs) {
-                            // I am the older tab — yield
-                            channel.close();
-                            sessionStorage.removeItem(SS_KEY);
-                            alert('This session is already active in another tab.\nThis tab will be redirected to the login page.');
-                            window.location.replace(
-                                window.location.origin
-                                + window.location.pathname.replace(/\/[^\/]*$/, '')
-                                + '/login.xhtml?reason=tab_conflict');
-                        } else {
-                            // I am the newer tab — tell the older one to leave
-                            channel.postMessage({ type: 'TAB_SUPERSEDED', tabToken: msg.tabToken, ts: Date.now() });
-                        }
+            function claimLock() {
+                writeLock();
+                // Start renewal heartbeat
+                window._wcpRenewTimer = setInterval(function() {
+                    var current = readLock();
+                    if (current && current.tabId !== MY_TAB_ID) {
+                        // Someone else claimed the lock while we were alive — evict them
+                        // (this shouldn't happen normally, but guard against it)
+                        clearInterval(window._wcpRenewTimer);
+                        alert('Session conflict detected.\nThis tab will be redirected to the login page.');
+                        doRedirect('tab_conflict');
+                        return;
                     }
+                    writeLock(); // renew
+                }, RENEW_MS);
+            }
 
-                    if (msg.type === 'TAB_SUPERSEDED' && msg.tabToken === myTabToken) {
-                        // I was explicitly told I'm superseded
-                        channel.close();
-                        sessionStorage.removeItem(SS_KEY);
-                        alert('This session has been taken over by a newer tab.\nThis tab will be redirected to the login page.');
-                        window.location.replace(
-                            window.location.origin
-                            + window.location.pathname.replace(/\/[^\/]*$/, '')
-                            + '/login.xhtml?reason=tab_conflict');
-                    }
-                };
+            // Evaluate lock state on page load
+            var lock = readLock();
 
-                // Keep announcing every 5 seconds (heartbeat for long-running tabs)
-                setInterval(function() {
+            if (!lock || isLockStale(lock)) {
+                // No active tab, or previous tab closed without releasing → claim
+                claimLock();
+
+            } else if (lock.tabId === MY_TAB_ID) {
+                // I already own the lock (page navigation within same tab) → just renew
+                claimLock();
+
+            } else {
+                // CONFLICT: another tab is alive and holds a fresh lock
+                // I am the intruder — block immediately, no negotiation
+                alert('This account is already open in another tab.\n' +
+                      'Only one tab is allowed per session.\n' +
+                      'This tab will be redirected to the login page.');
+                doRedirect('tab_conflict');
+                return;
+            }
+
+            // Release lock when tab closes or navigates away
+            window.addEventListener('beforeunload', function() {
+                releaseLock();
+                if (window._wcpRenewTimer) clearInterval(window._wcpRenewTimer);
+            });
+
+            // Also listen for storage events so this tab knows if another tab
+            // forcibly claimed the lock (e.g. after the TTL expired)
+            window.addEventListener('storage', function(e) {
+                if (e.key === LS_TAB_LOCK && e.newValue) {
                     try {
-                        channel.postMessage({ type: 'TAB_ALIVE', tabToken: myTabToken, ts: Date.now() });
-                    } catch(e) { /* channel may be closed */ }
-                }, 5000);
-            }
+                        var newLock = JSON.parse(e.newValue);
+                        if (newLock.tabId !== MY_TAB_ID) {
+                            // A different tab just claimed the lock
+                            if (window._wcpRenewTimer) clearInterval(window._wcpRenewTimer);
+                            alert('Session conflict detected.\nThis tab will be redirected to the login page.');
+                            doRedirect('tab_conflict');
+                        }
+                    } catch(e2) { /* ignore */ }
+                }
+                // Multi-browser: if browser token changes → we lost the session
+                if (e.key === LS_BROWSER && e.newValue && e.newValue !== SERVER_TOKEN) {
+                    if (window._wcpRenewTimer) clearInterval(window._wcpRenewTimer);
+                    alert('Your account has been signed in from another location.\n' +
+                          'You will be redirected to the login page.');
+                    doRedirect('session_conflict');
+                }
+            });
 
-            // ── 3. Server-side heartbeat poll every 15 seconds ──────────
+            // ── LAYER 3: Server-side heartbeat ───────────────────────────
             setInterval(function() {
                 try {
                     var xhr = new XMLHttpRequest();
-                    xhr.open('GET', window.location.pathname.replace(/\/[^\/]*$/, '') + '/session-heartbeat', true);
+                    xhr.open('GET', window.location.pathname.substring(
+                        0, window.location.pathname.lastIndexOf('/') + 1)
+                        + 'session-heartbeat', true);
                     xhr.onload = function() {
                         if (xhr.status === 200) {
                             try {
                                 var data = JSON.parse(xhr.responseText);
                                 if (data.status && data.status !== 'ok') {
-                                    sessionStorage.removeItem(SS_KEY);
-                                    var reason = data.status;
-                                    var msg = reason === 'displaced'
+                                    releaseLock();
+                                    if (window._wcpRenewTimer) clearInterval(window._wcpRenewTimer);
+                                    var msg = data.status === 'displaced'
                                         ? 'Your account was signed in from another location.'
                                         : 'Your session has expired.';
                                     alert(msg + '\nYou will be redirected to the login page.');
-                                    window.location.replace(
-                                        window.location.origin
-                                        + window.location.pathname.replace(/\/[^\/]*$/, '')
-                                        + '/login.xhtml?reason=' + reason);
+                                    doRedirect(data.status);
                                 }
-                            } catch(parseErr) { /* ignore */ }
+                            } catch(pe) { /* ignore parse errors */ }
                         }
                     };
                     xhr.send();
                 } catch(e) { /* ignore network errors */ }
-            }, 15000);
+            }, HEARTBEAT_MS);
 
-            // ── 4. Clean up localStorage on logout (handled server-side too) ──
-            window.addEventListener('beforeunload', function() {
-                // Don't clear — we need it to persist for multi-browser detection
-            });
         })();
         //]]>
         </script>
