@@ -32,7 +32,17 @@ public class JpaMatchRepository implements MatchRepository {
 
     @Override
     public Optional<Match> findById(Long id) {
-        return Optional.ofNullable(em.find(Match.class, id));
+        return em.createQuery(
+                        "SELECT m FROM Match m "
+                                + "LEFT JOIN FETCH m.homeTeamEntity "
+                                + "LEFT JOIN FETCH m.awayTeamEntity "
+                                + "LEFT JOIN FETCH m.round "
+                                + "LEFT JOIN FETCH m.group "
+                                + "WHERE m.id = :id",
+                        Match.class)
+                .setParameter("id", id)
+                .getResultStream()
+                .findFirst();
     }
 
     @Override

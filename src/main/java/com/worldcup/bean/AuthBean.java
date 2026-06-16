@@ -49,6 +49,7 @@ public class AuthBean implements Serializable {
      * 
      * @return "redirect:index.xhtml" on success, null to stay on login page on failure
      */
+
     public String login() {
         errorMessage = null;
         successMessage = null;
