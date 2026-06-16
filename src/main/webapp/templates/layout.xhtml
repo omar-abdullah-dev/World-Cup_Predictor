@@ -66,23 +66,142 @@
         </footer>
     </div>
 
-    <!-- Multi-tab / session-displacement detection — runs on every page -->
+    <!-- Session enforcement script — runs on every page for logged-in users.
+         
+         Multi-browser detection: localStorage token vs server token.
+           - localStorage is shared across all tabs of the same origin in the same browser.
+           - When user logs in on a NEW browser, server issues a NEW browserToken.
+           - The old browser still has the old token in localStorage.
+           - On next page load/navigate: old token != new token → conflict detected → redirect.
+         
+         Multi-tab detection: BroadcastChannel API.
+           - On login, Tab 1 stores a unique tabToken in sessionStorage (per-tab, not shared).
+           - Tab 1 broadcasts its tabToken on the 'wcp_tab_sync' channel.
+           - Any other tab that receives a different tabToken knows a conflict exists.
+           - The newer tab wins; older tabs are redirected to login.
+    -->
     <h:panelGroup rendered="#{authBean.loggedIn}" layout="block">
         <script type="text/javascript">
         //<![CDATA[
         (function() {
-            var serverToken = '#{authBean.browserToken}';
-            if (!serverToken || serverToken === 'null') return;
-            var KEY = 'wcp_browser_token';
-            var stored = localStorage.getItem(KEY);
-            if (!stored) {
-                localStorage.setItem(KEY, serverToken);
-            } else if (stored !== serverToken) {
-                // A new login displaced this session — another browser or tab took over
-                localStorage.removeItem(KEY);
-                alert('Your account was logged in from another location.\nYou will be redirected to the login page.');
-                window.location.href = '#{facesContext.externalContext.requestContextPath}/login.xhtml';
+            var serverBrowserToken = '#{authBean.browserToken}';
+            var LS_KEY  = 'wcp_browser_token';   // localStorage — shared across tabs, same browser
+            var SS_KEY  = 'wcp_tab_token';        // sessionStorage — isolated per tab
+            var LOGIN_TIME_KEY = 'wcp_login_time';
+
+            if (!serverBrowserToken || serverBrowserToken === 'null'
+                    || serverBrowserToken === '') return;
+
+            // ── 1. Multi-browser detection via localStorage ──────────────
+            var storedBrowserToken = localStorage.getItem(LS_KEY);
+            if (!storedBrowserToken) {
+                // First login in this browser — store it
+                localStorage.setItem(LS_KEY, serverBrowserToken);
+                localStorage.setItem(LOGIN_TIME_KEY, Date.now().toString());
+            } else if (storedBrowserToken !== serverBrowserToken) {
+                // This browser has a stale token — the account logged in elsewhere
+                localStorage.setItem(LS_KEY, serverBrowserToken);
+                localStorage.setItem(LOGIN_TIME_KEY, Date.now().toString());
+                // Clear this tab's token so the redirect doesn't loop
+                sessionStorage.removeItem(SS_KEY);
+                alert('Your account was signed in from another location.\nYou will be redirected to the login page.');
+                window.location.replace(
+                    window.location.origin
+                    + window.location.pathname.replace(/\/[^\/]*$/, '')
+                    + '/login.xhtml?reason=session_conflict');
+                return;
             }
+
+            // ── 2. Multi-tab detection via sessionStorage + BroadcastChannel ──
+            var myTabToken = sessionStorage.getItem(SS_KEY);
+            if (!myTabToken) {
+                // This is a fresh tab for this session — assign it the server's token as tab ID
+                myTabToken = serverBrowserToken + '_' + Date.now();
+                sessionStorage.setItem(SS_KEY, myTabToken);
+            }
+
+            if (typeof BroadcastChannel !== 'undefined') {
+                var channel = new BroadcastChannel('wcp_tab_sync');
+
+                // Announce this tab is alive
+                channel.postMessage({ type: 'TAB_ALIVE', tabToken: myTabToken, ts: Date.now() });
+
+                channel.onmessage = function(event) {
+                    var msg = event.data;
+                    if (!msg || !msg.type) return;
+
+                    if (msg.type === 'TAB_ALIVE' && msg.tabToken !== myTabToken) {
+                        // Another tab is also alive — this is a conflict.
+                        // The newer tab (higher ts) wins; older tab must leave.
+                        var myTs = parseInt(myTabToken.split('_').pop(), 10) || 0;
+                        var theirTs = msg.ts || 0;
+                        if (myTs < theirTs) {
+                            // I am the older tab — yield
+                            channel.close();
+                            sessionStorage.removeItem(SS_KEY);
+                            alert('This session is already active in another tab.\nThis tab will be redirected to the login page.');
+                            window.location.replace(
+                                window.location.origin
+                                + window.location.pathname.replace(/\/[^\/]*$/, '')
+                                + '/login.xhtml?reason=tab_conflict');
+                        } else {
+                            // I am the newer tab — tell the older one to leave
+                            channel.postMessage({ type: 'TAB_SUPERSEDED', tabToken: msg.tabToken, ts: Date.now() });
+                        }
+                    }
+
+                    if (msg.type === 'TAB_SUPERSEDED' && msg.tabToken === myTabToken) {
+                        // I was explicitly told I'm superseded
+                        channel.close();
+                        sessionStorage.removeItem(SS_KEY);
+                        alert('This session has been taken over by a newer tab.\nThis tab will be redirected to the login page.');
+                        window.location.replace(
+                            window.location.origin
+                            + window.location.pathname.replace(/\/[^\/]*$/, '')
+                            + '/login.xhtml?reason=tab_conflict');
+                    }
+                };
+
+                // Keep announcing every 5 seconds (heartbeat for long-running tabs)
+                setInterval(function() {
+                    try {
+                        channel.postMessage({ type: 'TAB_ALIVE', tabToken: myTabToken, ts: Date.now() });
+                    } catch(e) { /* channel may be closed */ }
+                }, 5000);
+            }
+
+            // ── 3. Server-side heartbeat poll every 15 seconds ──────────
+            setInterval(function() {
+                try {
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('GET', window.location.pathname.replace(/\/[^\/]*$/, '') + '/session-heartbeat', true);
+                    xhr.onload = function() {
+                        if (xhr.status === 200) {
+                            try {
+                                var data = JSON.parse(xhr.responseText);
+                                if (data.status && data.status !== 'ok') {
+                                    sessionStorage.removeItem(SS_KEY);
+                                    var reason = data.status;
+                                    var msg = reason === 'displaced'
+                                        ? 'Your account was signed in from another location.'
+                                        : 'Your session has expired.';
+                                    alert(msg + '\nYou will be redirected to the login page.');
+                                    window.location.replace(
+                                        window.location.origin
+                                        + window.location.pathname.replace(/\/[^\/]*$/, '')
+                                        + '/login.xhtml?reason=' + reason);
+                                }
+                            } catch(parseErr) { /* ignore */ }
+                        }
+                    };
+                    xhr.send();
+                } catch(e) { /* ignore network errors */ }
+            }, 15000);
+
+            // ── 4. Clean up localStorage on logout (handled server-side too) ──
+            window.addEventListener('beforeunload', function() {
+                // Don't clear — we need it to persist for multi-browser detection
+            });
         })();
         //]]>
         </script>

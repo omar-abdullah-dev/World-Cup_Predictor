@@ -4,6 +4,7 @@ import com.worldcup.model.UserSession;
 import com.worldcup.repository.JpaUserSessionRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -14,45 +15,38 @@ import java.util.logging.Logger;
 /**
  * Manages the lifecycle of user sessions in the database.
  *
- * Responsibilities:
- *  - Create a UserSession record on login
- *  - Enforce single-active-session per user (displace old session on new login)
- *  - Mark sessions as TERMINATED on explicit logout
- *  - Mark sessions as EXPIRED on timeout
- *  - Validate that an incoming request matches the active DB session
- *  - Update last-activity timestamp on every valid request
+ * ALL public methods are @Transactional to ensure session state
+ * changes (touch, displace, expire, terminate) are committed.
  */
 @ApplicationScoped
 public class UserSessionService {
 
     private static final Logger LOG = Logger.getLogger(UserSessionService.class.getName());
 
-    /** Session idle timeout: 8 hours. */
+    /** Session idle timeout in hours. */
     public static final int SESSION_TIMEOUT_HOURS = 8;
 
-    @Inject
-    private JpaUserSessionRepository sessionRepository;
+    @Inject private JpaUserSessionRepository sessionRepository;
+    @Inject private ActivityLogService activityLogService;
 
     // ── Login ─────────────────────────────────────────────────────────────
 
     /**
      * Called when a user successfully authenticates.
      *
-     * Steps:
-     *  1. Find any existing ACTIVE session for this user.
-     *  2. Mark it DISPLACED (single-session enforcement).
-     *  3. Create and persist a new ACTIVE session.
+     * Displaces any existing active session for the user (single-session enforcement),
+     * creates and persists a new ACTIVE session, and logs SESSION_CONFLICT if displaced.
      *
      * @return the new UserSession (ACTIVE)
      */
+    @Transactional
     public UserSession onLogin(Long userId, String username,
                                String httpSessionId,
                                String ipAddress, String userAgent) {
 
-        // Terminate any pre-existing active session for this user
-        displaceExistingSession(userId);
+        // Displace any existing active session — single-session enforcement
+        displaceExistingSession(userId, username, ipAddress, userAgent);
 
-        // Generate a browser token (stored in localStorage for tab-conflict detection)
         String browserToken = UUID.randomUUID().toString().replace("-", "");
 
         UserSession session = UserSession.createNew(
@@ -68,8 +62,8 @@ public class UserSessionService {
 
     /**
      * Marks the session identified by httpSessionId as TERMINATED.
-     * Called on explicit user logout.
      */
+    @Transactional
     public void onLogout(String httpSessionId) {
         sessionRepository.findBySessionId(httpSessionId).ifPresent(s -> {
             s.terminate();
@@ -84,22 +78,25 @@ public class UserSessionService {
     /**
      * Validates a request's session against the database record.
      *
-     * Checks:
-     *  - DB record exists for this httpSessionId
-     *  - Status is ACTIVE
-     *  - Last activity is within SESSION_TIMEOUT_HOURS
+     * Returns ValidationResult with the outcome so the filter can
+     * log the right event without making a second DB call.
      *
-     * If valid, updates lastActivityTime.
-     *
-     * @return true if the session is valid and active
+     * @return ValidationResult indicating VALID, INVALID (no record / displaced),
+     *         or EXPIRED (idle timeout exceeded)
      */
-    public boolean validateAndTouch(String httpSessionId) {
+    @Transactional
+    public ValidationResult validateAndTouch(String httpSessionId) {
         Optional<UserSession> opt = sessionRepository.findBySessionId(httpSessionId);
-        if (opt.isEmpty()) return false;
+        if (opt.isEmpty()) {
+            return ValidationResult.INVALID;
+        }
 
         UserSession session = opt.get();
 
-        if (!session.isActive()) return false;
+        if (!session.isActive()) {
+            // Already displaced or terminated — reject
+            return ValidationResult.DISPLACED;
+        }
 
         // Check idle timeout
         if (session.getLastActivityTime() != null &&
@@ -107,36 +104,62 @@ public class UserSessionService {
                         LocalDateTime.now().minusHours(SESSION_TIMEOUT_HOURS))) {
             session.expire();
             sessionRepository.save(session);
-            LOG.info("[UserSessionService] Session expired (idle timeout): "
-                    + httpSessionId + " user=" + session.getUsername());
-            return false;
+            LOG.info("[UserSessionService] Session expired (idle): " + httpSessionId
+                    + " user=" + session.getUsername());
+            return ValidationResult.EXPIRED;
         }
 
-        // Touch — update last activity
+        // Valid — touch
         session.touch();
         sessionRepository.save(session);
-        return true;
+        return ValidationResult.VALID;
+    }
+
+    /** Outcome of a session validation check. */
+    public enum ValidationResult {
+        VALID,      // session exists, active, within timeout
+        INVALID,    // no DB record found (orphan HTTP session)
+        DISPLACED,  // session was displaced by a new login
+        EXPIRED     // idle timeout exceeded
     }
 
     /**
-     * Marks the session as EXPIRED (called by the security filter on timeout).
+     * Marks the session as EXPIRED (called by the filter on hard 24h limit).
      */
+    @Transactional
     public void onExpire(String httpSessionId) {
         sessionRepository.findBySessionId(httpSessionId).ifPresent(s -> {
             s.expire();
             sessionRepository.save(s);
-            LOG.info("[UserSessionService] Session expired: " + httpSessionId
+            LOG.info("[UserSessionService] Session hard-expired: " + httpSessionId
                     + " user=" + s.getUsername());
         });
     }
 
-    // ── Browser token (multi-tab detection) ──────────────────────────────
+    /**
+     * Looks up the username stored in the DB session record for an HTTP session ID.
+     * Used by the filter to log events without needing AuthBean.
+     */
+    @Transactional
+    public String getUsernameForSession(String httpSessionId) {
+        return sessionRepository.findBySessionId(httpSessionId)
+                .map(UserSession::getUsername)
+                .orElse("unknown");
+    }
 
     /**
-     * Returns the browser token for the active session of a user.
-     * The client stores this in localStorage; tabs that open without it
-     * are detected as conflicting.
+     * Looks up the userId stored in the DB session record for an HTTP session ID.
      */
+    @Transactional
+    public Long getUserIdForSession(String httpSessionId) {
+        return sessionRepository.findBySessionId(httpSessionId)
+                .map(UserSession::getUserId)
+                .orElse(null);
+    }
+
+    // ── Browser token ─────────────────────────────────────────────────────
+
+    @Transactional
     public String getBrowserToken(String httpSessionId) {
         return sessionRepository.findBySessionId(httpSessionId)
                 .map(UserSession::getBrowserToken)
@@ -145,26 +168,43 @@ public class UserSessionService {
 
     // ── Admin queries ─────────────────────────────────────────────────────
 
+    @Transactional
     public List<UserSession> getAllActiveSessions() {
         return sessionRepository.findAllActive();
     }
 
+    @Transactional
     public List<UserSession> getAllSessions() {
         return sessionRepository.findAll();
     }
 
+    @Transactional
     public List<UserSession> getSessionsByUser(Long userId) {
         return sessionRepository.findByUserId(userId);
     }
 
     // ── Private helpers ───────────────────────────────────────────────────
 
-    private void displaceExistingSession(Long userId) {
+    private void displaceExistingSession(Long userId, String newUsername,
+                                          String newIp, String newUa) {
         sessionRepository.findActiveByUserId(userId).ifPresent(old -> {
+            String oldSessionId = old.getSessionId();
+            String oldIp        = old.getIpAddress();
             old.displace();
             sessionRepository.save(old);
-            LOG.info("[UserSessionService] Displaced existing session for userId=" + userId
-                    + " sessionId=" + old.getSessionId());
+            LOG.info("[UserSessionService] Displaced session for userId=" + userId
+                    + " oldSessionId=" + oldSessionId);
+
+            // Log SESSION_CONFLICT — new login displaced an existing session
+            activityLogService.log(
+                    "SESSION_CONFLICT",
+                    "SESSION_CONFLICT | user=" + newUsername
+                    + " | new_ip=" + newIp + " | old_ip=" + oldIp
+                    + " | old_session=" + oldSessionId
+                    + " | action=old_session_displaced",
+                    newUsername,
+                    userId, oldSessionId, newIp, newUa,
+                    null, null, null);
         });
     }
 }
