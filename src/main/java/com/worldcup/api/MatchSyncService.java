@@ -21,8 +21,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Synchronises data from WorldCupAPI into the local database.
- *
+ * Synchronizes data from WorldCupAPI into the local database.
  * Rules:
  *  - If external_match_id already exists → UPDATE
  *  - If not found → INSERT (only for group-stage matches with real team names)
