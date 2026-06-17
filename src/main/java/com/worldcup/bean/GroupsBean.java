@@ -7,6 +7,7 @@ import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 
+import java.util.Collections;
 import java.util.List;
 
 import java.util.stream.Collectors;
@@ -37,7 +38,7 @@ public class GroupsBean {
                 .filter(g -> g.getName().equals(groupName))
                 .findFirst()
                 .map(Group::getTeams)
-                .orElse(List.of());
+                .orElse(Collections.<Team>emptyList());
     }
 
     public String normalizeTeamName(String displayName) {
