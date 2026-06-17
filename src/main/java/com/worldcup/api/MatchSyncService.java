@@ -104,31 +104,20 @@ public class MatchSyncService {
             result.incrementSkipped(); return;
         }
 
-        Match match = matchRepository.findByExternalMatchId(f.getId()).orElse(null);
+        Match match = matchRepository.findAll().stream()
+                .filter(m -> m.getHomeTeam() != null && m.getAwayTeam() != null
+                        && m.getHomeTeam().equalsIgnoreCase(f.getHome().getName())
+                        && m.getAwayTeam().equalsIgnoreCase(f.getAway().getName()))
+                .findFirst().orElse(null);
         boolean isNew = (match == null);
 
         if (isNew) {
-            // Also try matching by home+away team name (for pre-seeded data)
-            match = matchRepository.findAll().stream()
-                    .filter(m -> m.getExternalMatchId() == null
-                            && m.getHomeTeam().equalsIgnoreCase(f.getHome().getName())
-                            && m.getAwayTeam().equalsIgnoreCase(f.getAway().getName()))
-                    .findFirst().orElse(null);
-            if (match == null) {
-                match = new Match();
-                match.setStatus(MatchStatus.SCHEDULED);
-            }
+            match = new Match();
+            match.setStatus(MatchStatus.SCHEDULED);
         }
 
-        // Always update these fields from API
-        match.setExternalMatchId(f.getId());
         match.setHomeTeam(f.getHome().getName());
         match.setAwayTeam(f.getAway().getName());
-        match.setHomeTeamApiId(f.getHome().getId());
-        match.setAwayTeamApiId(f.getAway().getId());
-        match.setHomeTeamLogo(f.getHome().getLogo());
-        match.setAwayTeamLogo(f.getAway().getLogo());
-        if (f.getLocation() != null) match.setVenue(f.getLocation());
 
         LocalDateTime kickoff = parseKickoff(f.getDate(), f.getTime());
         if (kickoff != null && match.getKickoffDate() == null) {
@@ -140,52 +129,69 @@ public class MatchSyncService {
     }
 
     private void processLiveScore(LiveScoreDto ls, SyncResultDto result) {
-        matchRepository.findByExternalMatchId(ls.getFixtureId()).ifPresent(match -> {
-            MatchStatus newStatus = mapApiStatus(ls.getStatus());
-            boolean wasFinished = match.isFinished();
+        Match match = matchRepository.findAll().stream()
+                .filter(m -> m.getHomeTeam() != null && m.getAwayTeam() != null
+                        && m.getHomeTeam().equalsIgnoreCase(ls.getHome().getName())
+                        && m.getAwayTeam().equalsIgnoreCase(ls.getAway().getName()))
+                .findFirst().orElse(null);
+        if (match == null) {
+            result.incrementSkipped();
+            return;
+        }
 
-            match.setStatus(newStatus);
+        MatchStatus newStatus = mapApiStatus(ls.getStatus());
+        boolean wasFinished = match.isFinished();
 
-            if (newStatus == MatchStatus.FINISHED) {
-                ScoresDto scores = ls.getScores();
-                String ftScore = scores != null ? scores.getFtScore() : "";
-                if (!ftScore.isBlank() && ftScore.contains("-")) {
-                    int[] parsed = parseScoreString(ftScore);
-                    if (parsed != null) {
-                        match.setHomeScore(parsed[0]);
-                        match.setAwayScore(parsed[1]);
-                        if (match.getResultEnteredAt() == null) {
-                            match.setResultEnteredAt(LocalDateTime.now());
-                        }
+        match.setStatus(newStatus);
+
+        if (newStatus == MatchStatus.FINISHED) {
+            ScoresDto scores = ls.getScores();
+            String ftScore = scores != null ? scores.getFtScore() : "";
+            if (ftScore != null && ftScore.contains("-")) {
+                int[] parsed = parseScoreString(ftScore);
+                if (parsed != null) {
+                    match.setHomeScore(parsed[0]);
+                    match.setAwayScore(parsed[1]);
+                    if (match.getResultEnteredAt() == null) {
+                        match.setResultEnteredAt(LocalDateTime.now());
                     }
                 }
-                matchRepository.update(match);
-
-                // Trigger prediction recalculation only once when newly finished
-                if (!wasFinished && match.getHomeScore() != null && match.getAwayScore() != null) {
-                    LOG.info("[MatchSyncService] Match " + match.getId()
-                            + " finished via API — recalculating predictions");
-                    predictionService.recalculateForMatch(match.getId());
-                    activityLogService.log("RES-API",
-                            "RES-API | screen=scheduler | user=system | detail=matchId="
-                            + match.getId() + " " + match.getHomeTeam()
-                            + " " + match.getHomeScore() + "-" + match.getAwayScore()
-                            + " " + match.getAwayTeam(), "system");
-                }
-            } else {
-                matchRepository.update(match);
             }
-            result.incrementUpdated();
-        });
+        }
+
+        matchRepository.update(match);
+
+        if (!wasFinished && match.isFinished() && match.getHomeScore() != null && match.getAwayScore() != null) {
+            LOG.info("[MatchSyncService] Match " + match.getId()
+                    + " finished via local data — recalculating predictions");
+            predictionService.recalculateForMatch(match.getId());
+            activityLogService.log("RES-API",
+                    "RES-API | screen=scheduler | user=system | detail=matchId="
+                    + match.getId() + " " + match.getHomeTeam()
+                    + " " + match.getHomeScore() + "-" + match.getAwayScore()
+                    + " " + match.getAwayTeam(), "system");
+        }
+        result.incrementUpdated();
     }
 
     private MatchStatus mapApiStatus(String apiStatus) {
         if (apiStatus == null) return MatchStatus.SCHEDULED;
-        return switch (apiStatus.toUpperCase().trim()) {
-            case "IN PLAY", "HALF TIME", "EXTRA TIME", "BREAK TIME", "IN_PLAY" -> MatchStatus.SCHEDULED;
-            case "FINISHED", "FT", "AET", "PEN", "FULL_TIME" -> MatchStatus.FINISHED;
-            default -> MatchStatus.SCHEDULED;
-        };
+        String normalized = apiStatus.toUpperCase().trim();
+        if ("IN PLAY".equals(normalized)
+                || "HALF TIME".equals(normalized)
+                || "EXTRA TIME".equals(normalized)
+                || "BREAK TIME".equals(normalized)
+                || "IN_PLAY".equals(normalized)) {
+            return MatchStatus.SCHEDULED;
+        }
+        if ("FINISHED".equals(normalized)
+                || "FT".equals(normalized)
+                || "AET".equals(normalized)
+                || "PEN".equals(normalized)
+                || "FULL_TIME".equals(normalized)) {
+            return MatchStatus.FINISHED;
+        }
+        return MatchStatus.SCHEDULED;
     }
 
     private int[] parseScoreString(String score) {
