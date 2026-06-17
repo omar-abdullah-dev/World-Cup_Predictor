@@ -46,6 +46,13 @@ public class AdminWhitelistBean implements Serializable {
     public void addEntry() {
         if (authBean.getUser() == null) return;
         try {
+            // Enforce corporate domain on both AD username and email
+            if (adUsername == null || !adUsername.trim().toUpperCase().endsWith("@QNB.COM.EG")) {
+                throw new IllegalArgumentException("AD username must end with @QNB.COM.EG");
+            }
+            if (email == null || !email.trim().toUpperCase().endsWith("@QNB.COM.EG")) {
+                throw new IllegalArgumentException("Email must end with @QNB.COM.EG");
+            }
             whitelistService.addEntry(authBean.getUser(), adUsername, employeeName, email);
             String username = authBean.getUser().getUsername();
             activityLogService.log("WL-CRE",

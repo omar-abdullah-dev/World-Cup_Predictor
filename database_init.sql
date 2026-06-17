@@ -73,4 +73,13 @@ ON CONFLICT DO NOTHING;
 -- Update admin's last login
 UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE username = 'admin';
 
+-- Ensure whitelist contains corporate-style AD usernames for local login
+INSERT INTO whitelist (ad_username, employee_name, email, enabled, added_at, added_by_user_id)
+VALUES ('admin@QNB.COM.EG', 'Admin User', 'admin@QNB.COM.EG', TRUE, CURRENT_TIMESTAMP, NULL)
+ON CONFLICT (ad_username) DO NOTHING;
+
+INSERT INTO whitelist (ad_username, employee_name, email, enabled, added_at, added_by_user_id)
+VALUES ('user@QNB.COM.EG', 'Sample User', 'user@QNB.COM.EG', TRUE, CURRENT_TIMESTAMP, NULL)
+ON CONFLICT (ad_username) DO NOTHING;
+
 
