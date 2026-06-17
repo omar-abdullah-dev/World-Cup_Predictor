@@ -160,14 +160,15 @@ function setCookie(name, value, days) {
     }
 })();
 
-// ── Tab token: append to every anchor href and every form action (Task 2) ──
+// ── Tab token: append tabToken param to every anchor href on DOMContentLoaded ──
+// This is the ONLY tab-enforcement mechanism — no localStorage, no sessionStorage.
+// The server-side TabEnforcementFilter validates the token on every GET request.
 document.addEventListener('DOMContentLoaded', function() {
     var tokenEl = document.getElementById('globalTabToken');
     if (!tokenEl) return;
     var token = tokenEl.value;
     if (!token || token === '' || token === 'null') return;
 
-    // Append to all anchor hrefs
     var anchors = document.querySelectorAll('a[href]');
     for (var i = 0; i < anchors.length; i++) {
         var a = anchors[i];
@@ -175,138 +176,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!href || href.indexOf('#') === 0 || href.indexOf('javascript') === 0
                 || href.indexOf('login.xhtml') >= 0
                 || href.indexOf('session-conflict.xhtml') >= 0) continue;
-        var sep = href.indexOf('?') >= 0 ? '&' : '?';
+        var sep = href.indexOf('?') >= 0 ? '&amp;' : '?';
         a.setAttribute('href', href + sep + 'tabToken=' + encodeURIComponent(token));
     }
 });
-
-// ── Session enforcement (multi-browser + multi-tab) ──────────────────────
-(function() {
-    var SERVER_TOKEN  = '#{authBean.browserToken}';
-    var LS_BROWSER    = 'wcp_browser_token';
-    var LS_TAB_LOCK   = 'wcp_tab_lock';
-    var LOCK_TTL_MS   = 4000;
-    var RENEW_MS      = 2000;
-    var HEARTBEAT_MS  = 15000;
-    var redirecting   = false;
-
-    if (!SERVER_TOKEN || SERVER_TOKEN === 'null' || SERVER_TOKEN === '') return;
-
-    var MY_TAB_ID = sessionStorage.getItem('wcp_tab_id');
-    if (!MY_TAB_ID) {
-        MY_TAB_ID = 'tab_' + Math.random().toString(36).substr(2, 12) + '_' + Date.now();
-        sessionStorage.setItem('wcp_tab_id', MY_TAB_ID);
-    }
-
-    var pathParts = window.location.pathname.split('/');
-    var ctxPath = (pathParts.length > 1 && pathParts[1]) ? '/' + pathParts[1] : '';
-    var loginUrl = window.location.origin + ctxPath + '/login.xhtml';
-
-    function doRedirect(reason) {
-        if (redirecting) return;
-        redirecting = true;
-        if (window._wcpRenewTimer) { clearInterval(window._wcpRenewTimer); window._wcpRenewTimer = null; }
-        window.location.replace(loginUrl + '?reason=' + reason);
-    }
-
-    function readLock() {
-        try { var r = localStorage.getItem(LS_TAB_LOCK); return r ? JSON.parse(r) : null; }
-        catch(e) { return null; }
-    }
-    function writeLock() {
-        try { localStorage.setItem(LS_TAB_LOCK, JSON.stringify({ tabId: MY_TAB_ID, renewedAt: Date.now() })); }
-        catch(e) {}
-    }
-    function releaseLock() {
-        try { var l = readLock(); if (l && l.tabId === MY_TAB_ID) localStorage.removeItem(LS_TAB_LOCK); }
-        catch(e) {}
-    }
-    function isLockStale(lock) { return !lock || (Date.now() - lock.renewedAt) >= LOCK_TTL_MS; }
-
-    function claimLock() {
-        writeLock();
-        if (window._wcpRenewTimer) clearInterval(window._wcpRenewTimer);
-        window._wcpRenewTimer = setInterval(function() {
-            if (redirecting) return;
-            var cur = readLock();
-            if (cur && cur.tabId !== MY_TAB_ID) {
-                alert('Session conflict detected. This tab will be closed.');
-                doRedirect('tab_conflict');
-            } else { writeLock(); }
-        }, RENEW_MS);
-    }
-
-    // Layer 1: multi-browser
-    var stored = localStorage.getItem(LS_BROWSER);
-    if (!stored) {
-        localStorage.setItem(LS_BROWSER, SERVER_TOKEN);
-    } else if (stored !== SERVER_TOKEN) {
-        localStorage.setItem(LS_BROWSER, SERVER_TOKEN);
-        sessionStorage.removeItem('wcp_tab_id');
-        alert('Your account has been signed in from another location.\nThis tab will be redirected to login.');
-        doRedirect('session_conflict');
-        return;
-    }
-
-    // Layer 2: single-tab lock
-    var lock = readLock();
-    if (!lock || isLockStale(lock)) {
-        claimLock();
-    } else if (lock.tabId === MY_TAB_ID) {
-        claimLock();
-    } else {
-        alert('This account is already open in another tab.\nOnly one tab is allowed.\nThis tab will be redirected to login.');
-        doRedirect('tab_conflict');
-        return;
-    }
-
-    window.addEventListener('beforeunload', function() {
-        releaseLock();
-        if (window._wcpRenewTimer) { clearInterval(window._wcpRenewTimer); window._wcpRenewTimer = null; }
-    });
-
-    window.addEventListener('storage', function(evt) {
-        if (redirecting) return;
-        if (evt.key === LS_TAB_LOCK && evt.newValue) {
-            try {
-                var nl = JSON.parse(evt.newValue);
-                if (nl.tabId !== MY_TAB_ID) {
-                    alert('Another tab has taken this session.\nThis tab will be redirected to login.');
-                    doRedirect('tab_conflict');
-                }
-            } catch(e) {}
-        }
-        if (evt.key === LS_BROWSER && evt.newValue && evt.newValue !== SERVER_TOKEN) {
-            alert('Your account has been signed in from another location.\nThis tab will be redirected to login.');
-            doRedirect('session_conflict');
-        }
-    });
-
-    // Layer 3: server heartbeat
-    setInterval(function() {
-        if (redirecting) return;
-        try {
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET', ctxPath + '/session-heartbeat', true);
-            xhr.onload = function() {
-                if (redirecting || xhr.status !== 200) return;
-                try {
-                    var d = JSON.parse(xhr.responseText);
-                    if (d.status && d.status !== 'ok') {
-                        releaseLock();
-                        var m = d.status === 'displaced'
-                            ? 'Your account was signed in from another location.'
-                            : 'Your session has expired.';
-                        alert(m + '\nYou will be redirected to login.');
-                        doRedirect(d.status);
-                    }
-                } catch(pe) {}
-            };
-            xhr.send();
-        } catch(e) {}
-    }, HEARTBEAT_MS);
-
-})();
 //]]>
 </script>
 

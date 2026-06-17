@@ -3,6 +3,9 @@
    Light / Dark theme via CSS custom properties
    ═══════════════════════════════════════════════════════════════ */
 
+/* Inter font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 /* ── LIGHT THEME (default) ── */
 :root {
   --bg-primary:       #F0F2F5;
@@ -98,7 +101,7 @@
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
 body {
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
   line-height: 1.6;
@@ -256,8 +259,11 @@ body {
 
 .points-badge   { background:var(--accent-blue); color:#fff; padding:4px 12px; border-radius:var(--radius-pill); font-weight:700; font-size:0.88em; }
 .points-exact   { background:var(--accent-green) !important; }
-.points-outcome { background:var(--color-primary-light) !important; }
-.points-zero    { background:var(--color-silver) !important; }
+.points-exact::before   { content: '\26BD  '; }
+.points-outcome { background:var(--accent-blue) !important; }
+.points-outcome::before { content: '\2713  '; }
+.points-zero    { background:var(--text-muted) !important; }
+.points-zero::before    { content: '\2717  '; }
 
 /* ── Messages ── */
 .message-error   { background:rgba(229,57,53,0.08); border-left:4px solid var(--accent-red); color:var(--accent-red); padding:12px 15px; border-radius:var(--radius-sm); margin-bottom:14px; }

@@ -28,9 +28,18 @@ public class WhitelistService {
     }
 
     public boolean isUserWhitelisted(String adUsername) {
+        if (adUsername == null) return false;
+        // Case-insensitive lookup — QNB usernames may be entered in any casing
         return whitelistRepository.findByAdUsername(adUsername)
                 .map(WhitelistEntry::isEnabled)
-                .orElse(false);
+                .orElseGet(new java.util.function.Supplier<Boolean>() {
+                    public Boolean get() {
+                        // Try uppercase fallback for case-sensitive DB collations
+                        return whitelistRepository.findByAdUsername(adUsername.toUpperCase())
+                                .map(WhitelistEntry::isEnabled)
+                                .orElse(false);
+                    }
+                });
     }
 
     public WhitelistEntry addEntry(User adminUser, String adUsername, String employeeName, String email) {

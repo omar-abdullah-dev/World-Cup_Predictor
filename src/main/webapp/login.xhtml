@@ -181,24 +181,10 @@
 
         <!-- Footer -->
         <div class="login-footer">
-            <p><small>Authentication via Active Directory</small></p>
+            <p><small>&#128274; Use your QNB corporate account (e.g. name@QNB.COM.EG)</small></p>
             <p><small>Contact an administrator if you need system access</small></p>
         </div>
     </div>
-
-    <!-- Clear stale browser token on logout/redirect to login page -->
-    <script type="text/javascript">
-    //<![CDATA[
-    (function() {
-        // Clear multi-browser token — will be re-set on next successful login
-        localStorage.removeItem('wcp_browser_token');
-        // Release the tab lock so a new tab can claim it after login
-        localStorage.removeItem('wcp_tab_lock');
-        // Clear per-tab ID
-        sessionStorage.removeItem('wcp_tab_id');
-    })();
-    //]]>
-    </script>
 </h:body>
 
 </html>

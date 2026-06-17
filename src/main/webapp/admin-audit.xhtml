@@ -175,33 +175,6 @@
             </h:panelGroup>
         </div>
 
-        <!-- ══════════════════════════════════════════════
-             Multi-tab detection script
-             ══════════════════════════════════════════════ -->
-        <h:panelGroup rendered="#{authBean.loggedIn}" layout="block">
-            <script type="text/javascript">
-            //<![CDATA[
-            (function() {
-                var serverToken = '#{authBean.browserToken}';
-                if (!serverToken) return; // not logged in or no token yet
-
-                var KEY = 'wcp_browser_token';
-                var stored = localStorage.getItem(KEY);
-
-                if (!stored) {
-                    // First tab — store the token
-                    localStorage.setItem(KEY, serverToken);
-                } else if (stored !== serverToken) {
-                    // Token mismatch — this is a displaced/different session
-                    localStorage.removeItem(KEY);
-                    alert('Your session has been taken over by another login.\nYou will be redirected to the login page.');
-                    window.location.href = '#{request.contextPath}/login.xhtml?sessionConflict=true';
-                }
-            })();
-            //]]>
-            </script>
-        </h:panelGroup>
-
     </ui:define>
 </ui:composition>
 </html>

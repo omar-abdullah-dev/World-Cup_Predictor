@@ -69,7 +69,8 @@ public class JpaWhitelistRepository implements WhitelistRepository {
 
     @Override
     public Optional<WhitelistEntry> findByAdUsername(String adUsername) {
-        String sql = "SELECT * FROM whitelist WHERE ad_username = ?";
+        // Case-insensitive match — handles both upper and lower case QNB usernames
+        String sql = "SELECT * FROM whitelist WHERE LOWER(ad_username) = LOWER(?)";
         try (Connection c = jdbc.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, adUsername);
