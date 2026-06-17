@@ -176,7 +176,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!href || href.indexOf('#') === 0 || href.indexOf('javascript') === 0
                 || href.indexOf('login.xhtml') >= 0
                 || href.indexOf('session-conflict.xhtml') >= 0) continue;
-        var sep = href.indexOf('?') >= 0 ? '&amp;' : '?';
+        var sep = href.indexOf('?') >= 0 ? '&' : '?';
         a.setAttribute('href', href + sep + 'tabToken=' + encodeURIComponent(token));
     }
 });
