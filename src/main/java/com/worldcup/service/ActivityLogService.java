@@ -126,16 +126,17 @@ public class ActivityLogService {
     public List<SystemActivityLog> findFiltered(String profilemaj, String opmaj) {
         StringBuilder jpql = new StringBuilder(
                 "SELECT l FROM SystemActivityLog l WHERE 1=1");
-        if (profilemaj != null && !profilemaj.isBlank())
+        if (profilemaj != null && !profilemaj.trim().isEmpty())
             jpql.append(" AND LOWER(l.profilemaj) LIKE LOWER(:profile)");
-        if (opmaj != null && !opmaj.isBlank())
+        if (opmaj != null && !opmaj.trim().isEmpty())
             jpql.append(" AND l.opmaj = :op");
         jpql.append(" ORDER BY l.datemaj DESC");
 
-        var query = em.createQuery(jpql.toString(), SystemActivityLog.class);
-        if (profilemaj != null && !profilemaj.isBlank())
+        jakarta.persistence.TypedQuery<SystemActivityLog> query =
+                em.createQuery(jpql.toString(), SystemActivityLog.class);
+        if (profilemaj != null && !profilemaj.trim().isEmpty())
             query.setParameter("profile", "%" + profilemaj + "%");
-        if (opmaj != null && !opmaj.isBlank())
+        if (opmaj != null && !opmaj.trim().isEmpty())
             query.setParameter("op", opmaj);
 
         return query.getResultList();

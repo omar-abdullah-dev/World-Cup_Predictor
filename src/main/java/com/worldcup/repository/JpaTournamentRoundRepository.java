@@ -32,10 +32,12 @@ public class JpaTournamentRoundRepository implements TournamentRoundRepository {
 
     @Override
     public Optional<TournamentRound> findByStage(TournamentStage stage) {
-        return em.createQuery("SELECT r FROM TournamentRound r WHERE r.stage = :stage", TournamentRound.class)
+        List<TournamentRound> results = em.createQuery(
+                "SELECT r FROM TournamentRound r WHERE r.stage = :stage",
+                TournamentRound.class)
                 .setParameter("stage", stage)
-                .getResultStream()
-                .findFirst();
+                .getResultList();
+        return results.isEmpty() ? Optional.<TournamentRound>empty() : Optional.of(results.get(0));
     }
 
     @Override

@@ -37,12 +37,13 @@ public class JpaPredictionRepository implements PredictionRepository {
 
     @Override
     public Optional<Prediction> findByUserAndMatch(Long userId, Long matchId) {
-        return em.createQuery(
-                "SELECT p FROM Prediction p WHERE p.userId = :uid AND p.matchId = :mid", Prediction.class)
+        List<Prediction> results = em.createQuery(
+                "SELECT p FROM Prediction p WHERE p.userId = :uid AND p.matchId = :mid",
+                Prediction.class)
                 .setParameter("uid", userId)
                 .setParameter("mid", matchId)
-                .getResultStream()
-                .findFirst();
+                .getResultList();
+        return results.isEmpty() ? Optional.<Prediction>empty() : Optional.of(results.get(0));
     }
 
     @Override

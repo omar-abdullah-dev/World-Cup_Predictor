@@ -32,12 +32,10 @@ public class LeaderboardBean {
     }
 
     public String getPodiumMedal(int index) {
-        return switch(index) {
-            case 0 -> "🥇";
-            case 1 -> "🥈";
-            case 2 -> "🥉";
-            default -> "";
-        };
+        if (index == 0) return "\uD83E\uDD47";
+        if (index == 1) return "\uD83E\uDD48";
+        if (index == 2) return "\uD83E\uDD49";
+        return "";
     }
 
     public int getTotalParticipants() { return userService.getAllUsers().size(); }

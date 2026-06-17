@@ -145,7 +145,7 @@ public class PredictionService {
     public List<Prediction> getPredictionsByUser(Long userId) {
         return predictionRepository.findAll().stream()
                 .filter(p -> p.getUserId().equals(userId))
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     public List<Prediction> getPredictionsByMatch(Long matchId) {

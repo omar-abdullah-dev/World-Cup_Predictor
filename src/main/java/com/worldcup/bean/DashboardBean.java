@@ -8,6 +8,8 @@ import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 
+import java.util.List;
+
 /**
  * Manages dashboard overview statistics.
  * Provides summary cards for homepage: total users, matches, predictions, top user.
@@ -33,7 +35,7 @@ public class DashboardBean {
     }
 
     public User getTopUser() {
-        var leaderboard = userService.getLeaderboard();
+        List<User> leaderboard = userService.getLeaderboard();
         return leaderboard.isEmpty() ? null : leaderboard.get(0);
     }
 

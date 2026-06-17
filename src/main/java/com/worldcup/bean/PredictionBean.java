@@ -94,7 +94,7 @@ public class PredictionBean implements Serializable {
                     jakarta.faces.context.FacesContext.getCurrentInstance()
                         .getExternalContext().getRequest();
                 String xff = req.getHeader("X-Forwarded-For");
-                ipAddress = (xff != null && !xff.isBlank()) ? xff.split(",")[0].trim() : req.getRemoteAddr();
+                ipAddress = (xff != null && !xff.trim().isEmpty()) ? xff.split(",")[0].trim() : req.getRemoteAddr();
                 userAgent = req.getHeader("User-Agent");
             } catch (Exception ignored) {}
 
@@ -131,7 +131,7 @@ public class PredictionBean implements Serializable {
         return deduplicateById(
             matchService.getAllMatches().stream()
                 .filter(m -> m.hasStarted() && !m.isFinished())
-                .toList());
+                .collect(java.util.stream.Collectors.toList()));
     }
 
     /** Finished matches — result + points. */
@@ -154,11 +154,9 @@ public class PredictionBean implements Serializable {
     }
 
     public String getPointsBadgeClass(int earnedPoints) {
-        return switch (earnedPoints) {
-            case 2 -> "points-exact";
-            case 1 -> "points-outcome";
-            default -> "points-zero";
-        };
+        if (earnedPoints == 2) return "points-exact";
+        if (earnedPoints == 1) return "points-outcome";
+        return "points-zero";
     }
 
     // -----------------------------------------------------------------------
@@ -181,7 +179,7 @@ public class PredictionBean implements Serializable {
     }
 
     public String getTeamInitials(String teamName) {
-        if (teamName == null || teamName.isBlank()) return "??";
+        if (teamName == null || teamName.trim().isEmpty()) return "??";
         String[] parts = teamName.trim().split("\\s+");
         if (parts.length >= 2)
             return ("" + parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
@@ -191,40 +189,37 @@ public class PredictionBean implements Serializable {
 
     public String getFlagForTeam(String teamName) {
         if (teamName == null) return "\uD83C\uDFF3";
-        return switch (teamName.trim().toLowerCase()) {
-            case "brazil"        -> "\uD83C\uDDE7\uD83C\uDDF7";
-            case "argentina"     -> "\uD83C\uDDE6\uD83C\uDDF7";
-            case "france"        -> "\uD83C\uDDEB\uD83C\uDDF7";
-            case "germany"       -> "\uD83C\uDDE9\uD83C\uDDEA";
-            case "spain"         -> "\uD83C\uDDEA\uD83C\uDDF8";
-            case "england"       -> "\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC65\uDB40\uDC6E\uDB40\uDC67\uDB40\uDC7F";
-            case "portugal"      -> "\uD83C\uDDF5\uD83C\uDDF9";
-            case "netherlands"   -> "\uD83C\uDDF3\uD83C\uDDF1";
-            case "italy"         -> "\uD83C\uDDEE\uD83C\uDDF9";
-            case "croatia"       -> "\uD83C\uDDED\uD83C\uDDF7";
-            case "morocco"       -> "\uD83C\uDDF2\uD83C\uDDE6";
-            case "senegal"       -> "\uD83C\uDDF8\uD83C\uDDF3";
-            case "qatar"         -> "\uD83C\uDDF6\uD83C\uDDE6";
-            case "ecuador"       -> "\uD83C\uDDEA\uD83C\uDDE8";
-            case "usa", "united states" -> "\uD83C\uDDFA\uD83C\uDDF8";
-            case "japan"         -> "\uD83C\uDDEF\uD83C\uDDF5";
-            case "south korea"   -> "\uD83C\uDDF0\uD83C\uDDF7";
-            case "australia"     -> "\uD83C\uDDE6\uD83C\uDDFA";
-            case "mexico"        -> "\uD83C\uDDF2\uD83C\uDDFD";
-            case "nigeria"       -> "\uD83C\uDDF3\uD83C\uDDEC";
-            case "cameroon"      -> "\uD83C\uDDE8\uD83C\uDDF2";
-            case "egypt"         -> "\uD83C\uDDEA\uD83C\uDDEC";
-            case "saudi arabia"  -> "\uD83C\uDDF8\uD83C\uDDE6";
-            case "ghana"         -> "\uD83C\uDDEC\uD83C\uDDED";
-            case "switzerland"   -> "\uD83C\uDDE8\uD83C\uDDED";
-            case "belgium"       -> "\uD83C\uDDE7\uD83C\uDDEA";
-            case "poland"        -> "\uD83C\uDDF5\uD83C\uDDF1";
-            case "uruguay"       -> "\uD83C\uDDFA\uD83C\uDDFE";
-            case "canada"        -> "\uD83C\uDDE8\uD83C\uDDE6";
-            case "iran"          -> "\uD83C\uDDEE\uD83C\uDDF7";
-            case "wales"         -> "\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC77\uDB40\uDC6C\uDB40\uDC73\uDB40\uDC7F";
-            default -> "\uD83C\uDFF3";
-        };
+        String t = teamName.trim().toLowerCase();
+        if ("brazil".equals(t))        return "\uD83C\uDDE7\uD83C\uDDF7";
+        if ("argentina".equals(t))     return "\uD83C\uDDE6\uD83C\uDDF7";
+        if ("france".equals(t))        return "\uD83C\uDDEB\uD83C\uDDF7";
+        if ("germany".equals(t))       return "\uD83C\uDDE9\uD83C\uDDEA";
+        if ("spain".equals(t))         return "\uD83C\uDDEA\uD83C\uDDF8";
+        if ("portugal".equals(t))      return "\uD83C\uDDF5\uD83C\uDDF9";
+        if ("netherlands".equals(t))   return "\uD83C\uDDF3\uD83C\uDDF1";
+        if ("italy".equals(t))         return "\uD83C\uDDEE\uD83C\uDDF9";
+        if ("croatia".equals(t))       return "\uD83C\uDDED\uD83C\uDDF7";
+        if ("morocco".equals(t))       return "\uD83C\uDDF2\uD83C\uDDE6";
+        if ("senegal".equals(t))       return "\uD83C\uDDF8\uD83C\uDDF3";
+        if ("qatar".equals(t))         return "\uD83C\uDDF6\uD83C\uDDE6";
+        if ("ecuador".equals(t))       return "\uD83C\uDDEA\uD83C\uDDE8";
+        if ("usa".equals(t) || "united states".equals(t)) return "\uD83C\uDDFA\uD83C\uDDF8";
+        if ("japan".equals(t))         return "\uD83C\uDDEF\uD83C\uDDF5";
+        if ("south korea".equals(t))   return "\uD83C\uDDF0\uD83C\uDDF7";
+        if ("australia".equals(t))     return "\uD83C\uDDE6\uD83C\uDDFA";
+        if ("mexico".equals(t))        return "\uD83C\uDDF2\uD83C\uDDFD";
+        if ("nigeria".equals(t))       return "\uD83C\uDDF3\uD83C\uDDEC";
+        if ("cameroon".equals(t))      return "\uD83C\uDDE8\uD83C\uDDF2";
+        if ("egypt".equals(t))         return "\uD83C\uDDEA\uD83C\uDDEC";
+        if ("saudi arabia".equals(t))  return "\uD83C\uDDF8\uD83C\uDDE6";
+        if ("ghana".equals(t))         return "\uD83C\uDDEC\uD83C\uDDED";
+        if ("switzerland".equals(t))   return "\uD83C\uDDE8\uD83C\uDDED";
+        if ("belgium".equals(t))       return "\uD83C\uDDE7\uD83C\uDDEA";
+        if ("poland".equals(t))        return "\uD83C\uDDF5\uD83C\uDDF1";
+        if ("uruguay".equals(t))       return "\uD83C\uDDFA\uD83C\uDDFE";
+        if ("canada".equals(t))        return "\uD83C\uDDE8\uD83C\uDDE6";
+        if ("iran".equals(t))          return "\uD83C\uDDEE\uD83C\uDDF7";
+        return "\uD83C\uDFF3";
     }
 
     // -----------------------------------------------------------------------

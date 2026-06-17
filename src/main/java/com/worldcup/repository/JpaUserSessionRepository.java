@@ -11,6 +11,7 @@ import java.util.Optional;
 
 /**
  * JPA repository for UserSession — session tracking persistence.
+ * Java 8 compatible — uses getResultList() instead of getResultStream().
  */
 @ApplicationScoped
 @Transactional
@@ -30,22 +31,22 @@ public class JpaUserSessionRepository {
     }
 
     public Optional<UserSession> findBySessionId(String sessionId) {
-        return em.createQuery(
+        List<UserSession> results = em.createQuery(
                 "SELECT s FROM UserSession s WHERE s.sessionId = :sid",
                 UserSession.class)
                 .setParameter("sid", sessionId)
-                .getResultStream()
-                .findFirst();
+                .getResultList();
+        return results.isEmpty() ? Optional.<UserSession>empty() : Optional.of(results.get(0));
     }
 
     /** Returns the single ACTIVE session for a user, if any. */
     public Optional<UserSession> findActiveByUserId(Long userId) {
-        return em.createQuery(
+        List<UserSession> results = em.createQuery(
                 "SELECT s FROM UserSession s WHERE s.userId = :uid AND s.status = 'ACTIVE'",
                 UserSession.class)
                 .setParameter("uid", userId)
-                .getResultStream()
-                .findFirst();
+                .getResultList();
+        return results.isEmpty() ? Optional.<UserSession>empty() : Optional.of(results.get(0));
     }
 
     /** All sessions for a user, newest first. */

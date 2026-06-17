@@ -30,10 +30,12 @@ public class JpaWhitelistRepository implements WhitelistRepository {
 
     @Override
     public Optional<WhitelistEntry> findByAdUsername(String adUsername) {
-        return em.createQuery("SELECT w FROM WhitelistEntry w WHERE w.adUsername = :username", WhitelistEntry.class)
+        List<WhitelistEntry> results = em.createQuery(
+                "SELECT w FROM WhitelistEntry w WHERE w.adUsername = :username",
+                WhitelistEntry.class)
                 .setParameter("username", adUsername)
-                .getResultStream()
-                .findFirst();
+                .getResultList();
+        return results.isEmpty() ? Optional.<WhitelistEntry>empty() : Optional.of(results.get(0));
     }
 
     @Override

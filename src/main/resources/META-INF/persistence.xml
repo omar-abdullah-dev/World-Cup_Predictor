@@ -21,7 +21,10 @@
         <class>com.worldcup.model.UserSession</class>
 
         <properties>
-            <!-- Hibernate dialect for PostgreSQL -->
+            <!-- Hibernate dialect for PostgreSQL (current) -->
+            <!-- Oracle (WebLogic): replace dialect with org.hibernate.dialect.Oracle12cDialect
+                 and change jta-data-source to match WebLogic JNDI name, e.g.:
+                 <jta-data-source>jdbc/WorldCupDS</jta-data-source> -->
             <property name="hibernate.dialect" value="org.hibernate.dialect.PostgreSQLDialect"/>
             <!-- Auto-create/update schema on deploy (use validate in production) -->
             <property name="hibernate.hbm2ddl.auto" value="update"/>

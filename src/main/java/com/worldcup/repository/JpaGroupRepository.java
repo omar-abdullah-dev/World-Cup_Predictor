@@ -38,15 +38,15 @@ public class JpaGroupRepository implements GroupRepository {
 
     @Override
     public Optional<Group> findByName(String name) {
-        return em.createQuery(
+        List<Group> results = em.createQuery(
                 "SELECT DISTINCT g FROM Group g "
                         + "LEFT JOIN FETCH g.teams "
                         + "LEFT JOIN FETCH g.round "
                         + "WHERE g.name = :name",
                 Group.class)
                 .setParameter("name", name)
-                .getResultStream()
-                .findFirst();
+                .getResultList();
+        return results.isEmpty() ? Optional.<Group>empty() : Optional.of(results.get(0));
     }
 
     @Override

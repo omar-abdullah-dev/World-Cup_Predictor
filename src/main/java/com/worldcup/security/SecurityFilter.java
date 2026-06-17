@@ -112,34 +112,32 @@ public class SecurityFilter implements Filter {
                     String ua       = req.getHeader("User-Agent");
 
                     switch (result) {
-                        case DISPLACED -> {
+                        case DISPLACED:
                             LOGGER.log(Level.WARNING,
                                     "Session displaced for user={0} sid={1}", new Object[]{username, sid});
                             auditLog("SESSION_CONFLICT",
                                     "SESSION_CONFLICT | user=" + username
-                                    + " | sid=" + sid + " | reason=displaced_by_new_login"
-                                    + " | ip=" + ip,
+                                    + " | sid=" + sid + " | reason=displaced_by_new_login | ip=" + ip,
                                     username, userId, sid, ip, ua);
-                        }
-                        case EXPIRED -> {
+                            break;
+                        case EXPIRED:
                             LOGGER.log(Level.INFO,
                                     "Session idle-expired for user={0} sid={1}", new Object[]{username, sid});
                             auditLog("SESSION_EXPIRED",
                                     "SESSION_EXPIRED | user=" + username
-                                    + " | sid=" + sid + " | reason=idle_timeout"
-                                    + " | ip=" + ip,
+                                    + " | sid=" + sid + " | reason=idle_timeout | ip=" + ip,
                                     username, userId, sid, ip, ua);
-                        }
-                        case INVALID -> {
+                            break;
+                        case INVALID:
                             LOGGER.log(Level.WARNING,
                                     "Orphan HTTP session for user={0} sid={1}", new Object[]{username, sid});
                             auditLog("UNAUTHORIZED_ACCESS_ATTEMPT",
                                     "UNAUTHORIZED_ACCESS_ATTEMPT | user=" + username
-                                    + " | sid=" + sid + " | reason=no_db_record"
-                                    + " | ip=" + ip,
+                                    + " | sid=" + sid + " | reason=no_db_record | ip=" + ip,
                                     username, userId, sid, ip, ua);
-                        }
-                        default -> { /* VALID — handled above */ }
+                            break;
+                        default:
+                            break;
                     }
 
                     // Invalidate the HTTP session (AuthBean state stays until GC,
@@ -228,7 +226,7 @@ public class SecurityFilter implements Filter {
 
     private static String clientIp(HttpServletRequest req) {
         String xff = req.getHeader("X-Forwarded-For");
-        return (xff != null && !xff.isBlank()) ? xff.split(",")[0].trim() : req.getRemoteAddr();
+        return (xff != null && !xff.trim().isEmpty()) ? xff.split(",")[0].trim() : req.getRemoteAddr();
     }
 
     private static <T> T cdi(Class<T> type) {

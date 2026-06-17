@@ -195,13 +195,39 @@ public class MatchService {
             throw new IllegalArgumentException("Scores cannot be negative.");
 
         Match match = getMatch(matchId);
-        
-        /* DEPRECATED
-        if (match.isFinished())
-            throw new IllegalArgumentException("Result already recorded for match ID: " + matchId);
-        */
-
         match.finish(homeScore, awayScore);
+        matchRepository.update(match);
+        predictionService.recalculateForMatch(matchId);
+        return match;
+    }
+
+    /**
+     * Force-records a knockout match result with extra time and penalty data.
+     * Stores all score information; decidedBy controls scoring logic.
+     *
+     * @param etHome    extra time home score (null if not applicable)
+     * @param etAway    extra time away score (null if not applicable)
+     * @param penHome   penalty shootout home score (null if not applicable)
+     * @param penAway   penalty shootout away score (null if not applicable)
+     * @param decidedBy "90" | "ET" | "PEN" — how the match was decided
+     */
+    public Match forceUpdateResult(User adminUser, Long matchId,
+                                    int homeScore, int awayScore,
+                                    Integer etHome, Integer etAway,
+                                    Integer penHome, Integer penAway,
+                                    String decidedBy) {
+        SecurityService.assertAdmin(adminUser, "force record knockout match result");
+
+        if (homeScore < 0 || awayScore < 0)
+            throw new IllegalArgumentException("Scores cannot be negative.");
+
+        Match match = getMatch(matchId);
+        match.finish(homeScore, awayScore);
+        match.setExtraTimeHomeScore(etHome);
+        match.setExtraTimeAwayScore(etAway);
+        match.setPenaltyHomeScore(penHome);
+        match.setPenaltyAwayScore(penAway);
+        match.setMatchDecidedBy(decidedBy);
         matchRepository.update(match);
         predictionService.recalculateForMatch(matchId);
         return match;

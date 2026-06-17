@@ -118,7 +118,7 @@ public class MatchBean implements Serializable {
         LOG.info("[saveResult] matchId=" + matchId + " force=" + force
                 + " hs_" + matchId + "='" + hsRaw + "' as_" + matchId + "='" + asRaw + "'");
 
-        if (hsRaw == null || hsRaw.isBlank() || asRaw == null || asRaw.isBlank()) {
+        if (hsRaw == null || hsRaw.trim().isEmpty() || asRaw == null || asRaw.trim().isEmpty()) {
             errorMessage = "Please enter both scores before saving the result.";
             return null;
         }
@@ -242,7 +242,7 @@ public class MatchBean implements Serializable {
     }
 
     public String getTeamInitials(String teamName) {
-        if (teamName == null || teamName.isBlank()) {
+        if (teamName == null || teamName.trim().isEmpty()) {
             return "??";
         }
         String[] parts = teamName.trim().split("\\s+");
@@ -254,31 +254,26 @@ public class MatchBean implements Serializable {
     }
 
     public String getFlagForTeam(String teamName) {
-        if (teamName == null) {
-            return "🏳";
-        }
-        return switch (teamName.trim().toLowerCase()) {
-            case "brazil" -> "🇧🇷";
-            case "argentina" -> "🇦🇷";
-            case "france" -> "🇫🇷";
-            case "germany" -> "🇩🇪";
-            case "spain" -> "🇪🇸";
-            case "england" -> "🏴󠁧󠁢󠁥󠁮󠁧󠁿";
-            case "portugal" -> "🇵🇹";
-            case "netherlands" -> "🇳🇱";
-            case "italy" -> "🇮🇹";
-            case "senegal" -> "🇸🇳";
-            case "qatar" -> "🇶🇦";
-            case "ecuador" -> "🇪🇨";
-            case "usa", "united states" -> "🇺🇸";
-            case "japan" -> "🇯🇵";
-            case "mexico" -> "🇲🇽";
-            case "saudi arabia" -> "🇸🇦";
-            case "poland" -> "🇵🇱";
-            case "iran" -> "🇮🇷";
-            case "wales" -> "🏴󠁧󠁢󠁷󠁬󠁳󠁿";
-            default -> "🏳";
-        };
+        if (teamName == null) return "\uD83C\uDFF3";
+        String t = teamName.trim().toLowerCase();
+        if ("brazil".equals(t))    return "\uD83C\uDDE7\uD83C\uDDF7";
+        if ("argentina".equals(t)) return "\uD83C\uDDE6\uD83C\uDDF7";
+        if ("france".equals(t))    return "\uD83C\uDDEB\uD83C\uDDF7";
+        if ("germany".equals(t))   return "\uD83C\uDDE9\uD83C\uDDEA";
+        if ("spain".equals(t))     return "\uD83C\uDDEA\uD83C\uDDF8";
+        if ("portugal".equals(t))  return "\uD83C\uDDF5\uD83C\uDDF9";
+        if ("netherlands".equals(t)) return "\uD83C\uDDF3\uD83C\uDDF1";
+        if ("italy".equals(t))     return "\uD83C\uDDEE\uD83C\uDDF9";
+        if ("senegal".equals(t))   return "\uD83C\uDDF8\uD83C\uDDF3";
+        if ("qatar".equals(t))     return "\uD83C\uDDF6\uD83C\uDDE6";
+        if ("ecuador".equals(t))   return "\uD83C\uDDEA\uD83C\uDDE8";
+        if ("usa".equals(t) || "united states".equals(t)) return "\uD83C\uDDFA\uD83C\uDDF8";
+        if ("japan".equals(t))     return "\uD83C\uDDEF\uD83C\uDDF5";
+        if ("mexico".equals(t))    return "\uD83C\uDDF2\uD83C\uDDFD";
+        if ("saudi arabia".equals(t)) return "\uD83C\uDDF8\uD83C\uDDE6";
+        if ("poland".equals(t))    return "\uD83C\uDDF5\uD83C\uDDF1";
+        if ("iran".equals(t))      return "\uD83C\uDDEE\uD83C\uDDF7";
+        return "\uD83C\uDFF3";
     }
 
     public boolean canDelete(Match match) {

@@ -14,55 +14,55 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 
 import java.io.Serializable;
+import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  * Manages user authentication and session state.
- * 
- * This bean is @SessionScoped (one instance per HTTP session).
- * Once a user logs in, their User object is stored in the session.
- * All subsequent requests use the same authenticated User.
- * 
- * Usage in JSF:
- * - #{authBean.loggedIn} to check if user is authenticated
- * - #{authBean.user} to access the current user
- * - #{authBean.login()} to handle login form submission
- * - #{authBean.logout()} to clear session
- * 
- * @author Security Team
+ *
+ * @SessionScoped — one instance per HTTP session.
+ *
+ * Java 8 compatible — no String.isBlank(), no var, no switch expressions.
  */
 @Named
 @SessionScoped
 public class AuthBean implements Serializable {
+
     private static final long serialVersionUID = 1L;
     private static final Logger LOGGER = Logger.getLogger(AuthBean.class.getName());
 
+    /** HTTP session attribute key for single-tab enforcement token. */
+    public static final String TAB_TOKEN_ATTR = "activeTabToken";
+
     @Inject private AuthenticationService authenticationService;
-    @Inject private ActivityLogService activityLogService;
-    @Inject private UserSessionService userSessionService;
+    @Inject private ActivityLogService    activityLogService;
+    @Inject private UserSessionService    userSessionService;
 
-    private User user;
-    private String username;
-    private String password;
-    private String errorMessage;
-    private String successMessage;
+    private User        user;
+    private String      username;
+    private String      password;
+    private String      errorMessage;
+    private String      successMessage;
 
-    /** DB session record for the current login — stored in the HTTP session. */
-    private UserSession currentSession;
+    /** DB session record — kept only as a transient reference, not serialized via JPA proxy. */
+    private transient UserSession currentSession;
 
-    /** Browser token — plain String copy so it survives serialization without a JPA proxy. */
+    /** Browser token stored as plain String — safe across serialization. */
     private String browserToken;
 
     /**
-     * Handles login form submission.
-     * Validates username/password and stores authenticated User in session.
-     * 
-     * @return "redirect:index.xhtml" on success, null to stay on login page on failure
+     * Single-tab enforcement token.
+     * Generated on login, stored in the HTTP session attribute "activeTabToken"
+     * AND in this bean field. Injected into every page via layout.xhtml.
+     * TabEnforcementFilter validates it on every GET request.
      */
+    private String currentTabToken;
+
+    // ── Login ─────────────────────────────────────────────────────────────
 
     public String login() {
-        errorMessage = null;
+        errorMessage   = null;
         successMessage = null;
 
         try {
@@ -75,26 +75,26 @@ public class AuthBean implements Serializable {
                 return null;
             }
 
-            // Authenticate user with provided credentials
             this.user = authenticationService.authenticate(username.trim(), password);
             this.successMessage = "Welcome, " + user.getUsername() + "!";
-            
-            // Clear sensitive data
             this.password = null;
 
-            // ── Session tracking ──────────────────────────────────────────
-            FacesContext fc = FacesContext.getCurrentInstance();
+            FacesContext fc        = FacesContext.getCurrentInstance();
             HttpServletRequest req = (HttpServletRequest) fc.getExternalContext().getRequest();
             HttpSession httpSession = req.getSession(true);
-            String sessionId  = httpSession.getId();
-            String ipAddress  = getClientIp(req);
-            String userAgent  = req.getHeader("User-Agent");
+            String sessionId = httpSession.getId();
+            String ipAddress = getClientIp(req);
+            String userAgent = req.getHeader("User-Agent");
 
+            // ── DB session tracking ───────────────────────────────────────
             this.currentSession = userSessionService.onLogin(
                     user.getId(), user.getUsername(), sessionId, ipAddress, userAgent);
-            // Store token as plain String — JPA proxy is not safe to serialize across requests
-            this.browserToken = this.currentSession != null
+            this.browserToken = (this.currentSession != null)
                     ? this.currentSession.getBrowserToken() : null;
+
+            // ── Single-tab token ──────────────────────────────────────────
+            this.currentTabToken = UUID.randomUUID().toString();
+            httpSession.setAttribute(TAB_TOKEN_ATTR, this.currentTabToken);
 
             LOGGER.info("User logged in: " + user.getUsername());
             activityLogService.log("LOGIN",
@@ -103,9 +103,9 @@ public class AuthBean implements Serializable {
                     user.getUsername(),
                     user.getId(), sessionId, ipAddress, userAgent,
                     null, null, null);
-            
-            // Redirect to dashboard
+
             return "/index.xhtml?faces-redirect=true";
+
         } catch (SecurityException e) {
             errorMessage = e.getMessage();
             LOGGER.log(Level.WARNING, "Login failed: " + errorMessage);
@@ -117,22 +117,18 @@ public class AuthBean implements Serializable {
         }
     }
 
-    /**
-     * Handles logout.
-     * Uses direct redirect via ExternalContext to avoid JSF navigation case errors
-     * when logging out from any page (including admin pages with no faces-config rules).
-     */
+    // ── Logout ────────────────────────────────────────────────────────────
+
     public void logout() {
         if (user != null) {
             LOGGER.info("User logged out: " + user.getUsername());
-            // ── Session tracking ──────────────────────────────────────────
             try {
-                FacesContext fc2 = FacesContext.getCurrentInstance();
-                HttpServletRequest req2 = (HttpServletRequest) fc2.getExternalContext().getRequest();
-                HttpSession httpSess = req2.getSession(false);
-                String sessionId = httpSess != null ? httpSess.getId() : "unknown";
-                String ipAddress = getClientIp(req2);
-                String userAgent = req2.getHeader("User-Agent");
+                FacesContext fc        = FacesContext.getCurrentInstance();
+                HttpServletRequest req = (HttpServletRequest) fc.getExternalContext().getRequest();
+                HttpSession httpSess   = req.getSession(false);
+                String sessionId = (httpSess != null) ? httpSess.getId() : "unknown";
+                String ipAddress = getClientIp(req);
+                String userAgent = req.getHeader("User-Agent");
 
                 userSessionService.onLogout(sessionId);
                 activityLogService.log("LOGOUT",
@@ -144,34 +140,36 @@ public class AuthBean implements Serializable {
                 LOGGER.log(Level.WARNING, "Error recording logout audit", ex);
             }
         }
-        this.user           = null;
-        this.currentSession = null;
-        this.browserToken   = null;
-        this.username       = null;
-        this.password       = null;
-        this.errorMessage   = null;
-        this.successMessage = null;
+        this.user             = null;
+        this.currentSession   = null;
+        this.browserToken     = null;
+        this.currentTabToken  = null;
+        this.username         = null;
+        this.password         = null;
+        this.errorMessage     = null;
+        this.successMessage   = null;
 
         try {
             FacesContext fc = FacesContext.getCurrentInstance();
+            // Remove tab token from session before invalidating
+            HttpServletRequest req = (HttpServletRequest) fc.getExternalContext().getRequest();
+            HttpSession s = req.getSession(false);
+            if (s != null) {
+                s.removeAttribute(TAB_TOKEN_ATTR);
+            }
             fc.getExternalContext().invalidateSession();
             fc.getExternalContext().redirect(
-                fc.getExternalContext().getRequestContextPath() + "/login.xhtml");
+                    fc.getExternalContext().getRequestContextPath() + "/login.xhtml");
             fc.responseComplete();
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "Error during logout redirect", e);
         }
     }
 
-    /**
-     * Checks if a user is currently logged in and approved.
-     * 
-     * @return true if user is authenticated and approved, false otherwise
-     */
+    // ── Session check ─────────────────────────────────────────────────────
+
     public boolean isLoggedIn() {
         if (user == null) return false;
-        
-        // Dynamically check against Whitelist
         User activeUser = authenticationService.validateActiveSession(user.getId());
         if (activeUser == null) {
             this.user = null;
@@ -181,91 +179,53 @@ public class AuthBean implements Serializable {
         return true;
     }
 
-    /**
-     * Checks if the current user is an admin.
-     * 
-     * @return true if user is logged in and has ADMIN role, false otherwise
-     */
-    public boolean isAdmin() {
-        return user != null && user.isAdmin();
-    }
+    public boolean isAdmin()      { return user != null && user.isAdmin(); }
+    public boolean isNormalUser() { return user != null && user.isNormalUser(); }
 
-    /**
-     * Checks if the current user is a normal user (non-admin).
-     * 
-     * @return true if user is logged in and has NORMAL_USER role, false otherwise
-     */
-    public boolean isNormalUser() {
-        return user != null && user.isNormalUser();
-    }
+    // ── Accessors ─────────────────────────────────────────────────────────
 
-    /**
-     * Gets the currently authenticated user.
-     * 
-     * @return User object, or null if not logged in
-     */
-    public User getUser() {
-        return user;
-    }
+    public User   getUser()               { return user; }
+    public String getCurrentUsername()    { return user != null ? user.getUsername() : "Guest"; }
+    public Long   getCurrentUserId()      { return user != null ? user.getId() : null; }
 
-    /**
-     * Gets the username of the currently authenticated user.
-     * 
-     * @return username string, or "Guest" if not logged in
-     */
-    public String getCurrentUsername() {
-        return user != null ? user.getUsername() : "Guest";
-    }
+    public String getUsername()           { return username; }
+    public void   setUsername(String u)   { this.username = u; }
 
-    /**
-     * Gets the user ID of the currently authenticated user.
-     * 
-     * @return user ID, or null if not logged in
-     */
-    public Long getCurrentUserId() {
-        return user != null ? user.getId() : null;
-    }
+    public String getPassword()           { return password; }
+    public void   setPassword(String p)   { this.password = p; }
 
-    // ===== Form Input Properties =====
+    public String getErrorMessage()       { return errorMessage; }
+    public void   setErrorMessage(String m) { this.errorMessage = m; }
 
-    public String getUsername() { return username; }
-    public void setUsername(String username) { this.username = username; }
+    public String getSuccessMessage()     { return successMessage; }
+    public void   setSuccessMessage(String m) { this.successMessage = m; }
 
-    public String getPassword() { return password; }
-    public void setPassword(String password) { this.password = password; }
-
-    public String getErrorMessage() { return errorMessage; }
-    public void setErrorMessage(String msg) { this.errorMessage = msg; }
-
-    public String getSuccessMessage() { return successMessage; }
-    public void setSuccessMessage(String msg) { this.successMessage = msg; }
-
-    /** The DB-tracked session for this login — may be null before login. */
     public UserSession getCurrentSession() { return currentSession; }
 
-    /** Returns the current HTTP session ID, or null if no session exists. */
+    /** Browser token for multi-browser session conflict detection. */
+    public String getBrowserToken()        { return browserToken; }
+
+    /** Tab token for single-tab enforcement — injected into every page. */
+    public String getCurrentTabToken()     { return currentTabToken; }
+    public void   setCurrentTabToken(String t) { this.currentTabToken = t; }
+
     public String getHttpSessionId() {
         try {
             FacesContext fc = FacesContext.getCurrentInstance();
             if (fc == null) return null;
             HttpServletRequest req = (HttpServletRequest) fc.getExternalContext().getRequest();
             HttpSession s = req.getSession(false);
-            return s != null ? s.getId() : null;
+            return (s != null) ? s.getId() : null;
         } catch (Exception e) {
             return null;
         }
-    }
-
-    /** Returns the browser token to be injected into the page for tab-conflict detection. */
-    public String getBrowserToken() {
-        return browserToken;
     }
 
     // ── Private helpers ───────────────────────────────────────────────────
 
     private String getClientIp(HttpServletRequest req) {
         String xff = req.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) {
+        if (xff != null && !xff.trim().isEmpty()) {
             return xff.split(",")[0].trim();
         }
         return req.getRemoteAddr();
@@ -273,6 +233,6 @@ public class AuthBean implements Serializable {
 
     private String abbreviate(String s, int max) {
         if (s == null) return "";
-        return s.length() <= max ? s : s.substring(0, max) + "…";
+        return s.length() <= max ? s : s.substring(0, max) + "...";
     }
 }

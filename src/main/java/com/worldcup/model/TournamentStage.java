@@ -35,13 +35,15 @@ public enum TournamentStage {
     }
 
     public TournamentStage nextStage() {
-        return switch (this) {
-            case GROUP_STAGE -> ROUND_OF_32;
-            case ROUND_OF_32 -> ROUND_OF_16;
-            case ROUND_OF_16 -> QUARTER_FINAL;
-            case QUARTER_FINAL -> SEMI_FINAL;
-            case SEMI_FINAL -> FINAL;
-            case THIRD_PLACE, FINAL -> null;
-        };
+        switch (this) {
+            case GROUP_STAGE:   return ROUND_OF_32;
+            case ROUND_OF_32:   return ROUND_OF_16;
+            case ROUND_OF_16:   return QUARTER_FINAL;
+            case QUARTER_FINAL: return SEMI_FINAL;
+            case SEMI_FINAL:    return FINAL;
+            case THIRD_PLACE:
+            case FINAL:         return null;
+            default:            return null;
+        }
     }
 }

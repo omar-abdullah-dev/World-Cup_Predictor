@@ -11,6 +11,9 @@ import java.util.Optional;
 
 /**
  * JPA/Hibernate implementation of MatchRepository.
+ *
+ * Java 8 compatible — no getResultStream() usage.
+ * Uses getResultList().isEmpty() / get(0) pattern for Optional returns.
  */
 @ApplicationScoped
 @Transactional
@@ -32,7 +35,7 @@ public class JpaMatchRepository implements MatchRepository {
 
     @Override
     public Optional<Match> findById(Long id) {
-        return em.createQuery(
+        List<Match> results = em.createQuery(
                         "SELECT m FROM Match m "
                                 + "LEFT JOIN FETCH m.homeTeamEntity "
                                 + "LEFT JOIN FETCH m.awayTeamEntity "
@@ -41,8 +44,8 @@ public class JpaMatchRepository implements MatchRepository {
                                 + "WHERE m.id = :id",
                         Match.class)
                 .setParameter("id", id)
-                .getResultStream()
-                .findFirst();
+                .getResultList();
+        return results.isEmpty() ? Optional.<Match>empty() : Optional.of(results.get(0));
     }
 
     @Override
@@ -94,15 +97,5 @@ public class JpaMatchRepository implements MatchRepository {
     public void deleteById(Long id) {
         Match match = em.find(Match.class, id);
         if (match != null) em.remove(match);
-    }
-
-    @Override
-    public Optional<Match> findByExternalMatchId(Long externalMatchId) {
-        return em.createQuery(
-                "SELECT m FROM Match m WHERE m.externalMatchId = :eid",
-                Match.class)
-                .setParameter("eid", externalMatchId)
-                .getResultStream()
-                .findFirst();
     }
 }

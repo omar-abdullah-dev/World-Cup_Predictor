@@ -30,10 +30,12 @@ public class JpaTeamRepository implements TeamRepository {
 
     @Override
     public Optional<Team> findByName(String name) {
-        return em.createQuery("SELECT t FROM Team t WHERE t.name = :name", Team.class)
+        List<Team> results = em.createQuery(
+                "SELECT t FROM Team t WHERE t.name = :name",
+                Team.class)
                 .setParameter("name", name)
-                .getResultStream()
-                .findFirst();
+                .getResultList();
+        return results.isEmpty() ? Optional.<Team>empty() : Optional.of(results.get(0));
     }
 
     @Override

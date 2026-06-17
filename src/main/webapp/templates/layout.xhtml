@@ -6,274 +6,309 @@
       xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
       xmlns:f="http://xmlns.jcp.org/jsf/core">
 <h:head>
+    <!-- ── Theme flash prevention: read cookie before CSS loads ── -->
+    <script type="text/javascript">
+    //<![CDATA[
+    (function() {
+        function getCookie(name) {
+            var v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+            return v ? v.pop() : null;
+        }
+        var theme = getCookie('wcPredictor_theme');
+        if (theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    })();
+    //]]>
+    </script>
+
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title><ui:insert name="title">World Cup Predictor</ui:insert></title>
     <h:outputStylesheet name="css/styles.css"/>
 </h:head>
 <h:body>
-    <div class="app-container">
-        <header class="app-header">
-            <div class="header-content">
-                <h1 class="app-title">
-                    <span class="title-icon">&#9917;</span> World Cup Predictor
-                </h1>
-                <input type="checkbox" id="nav-toggle" class="nav-toggle"/>
-                <label for="nav-toggle" class="nav-toggle-label" title="Toggle navigation">&#9776;</label>
-                <nav class="app-nav">
-                    <h:link outcome="index" value="Dashboard"
-                            styleClass="nav-link#{navBean.isActive('index') ? ' active' : ''}"/>
-                    <h:link outcome="groups" value="Groups"
-                            styleClass="nav-link#{navBean.isActive('groups') ? ' active' : ''}"/>
-                    <h:link outcome="matches" value="Matches"
-                            styleClass="nav-link#{navBean.isActive('matches') ? ' active' : ''}"/>
-                    <h:link outcome="predictions" value="Predictions"
-                            styleClass="nav-link#{navBean.isActive('predictions') ? ' active' : ''}"/>
-                    <h:link outcome="leaderboard" value="Leaderboard"
-                            styleClass="nav-link#{navBean.isActive('leaderboard') ? ' active' : ''}"/>
-                    <h:panelGroup rendered="#{authBean.admin}" layout="inline">
-                        <h:link outcome="users" value="Users"
-                                styleClass="nav-link#{navBean.isActive('users') ? ' active' : ''}"/>
-                        <h:link outcome="admin-whitelist" value="Admin Whitelist"
-                                styleClass="nav-link#{navBean.isActive('admin-whitelist') ? ' active' : ''}"/>
-                        <h:link outcome="admin-rounds" value="Admin Rounds"
-                                styleClass="nav-link#{navBean.isActive('admin-rounds') ? ' active' : ''}"/>
-                        <h:link outcome="admin-groups" value="Admin Groups"
-                                styleClass="nav-link#{navBean.isActive('admin-groups') ? ' active' : ''}"/>
-                        <h:link outcome="admin-matches" value="Admin Matches"
-                                styleClass="nav-link#{navBean.isActive('admin-matches') ? ' active' : ''}"/>
-                        <h:link outcome="admin-audit" value="&#128274; Audit Log"
-                                styleClass="nav-link#{navBean.isActive('admin-audit') ? ' active' : ''}"/>
-                    </h:panelGroup>
-                    <h:panelGroup rendered="#{authBean.loggedIn}" layout="inline">
-                        <h:form styleClass="nav-logout-form" style="display:inline">
-                            <h:commandLink value="Logout (#{authBean.currentUsername})"
-                                          action="#{authBean.logout}"
-                                          styleClass="nav-link nav-link-logout"/>
-                        </h:form>
-                    </h:panelGroup>
-                    <h:panelGroup rendered="#{not authBean.loggedIn}" layout="inline">
-                        <h:link outcome="login" value="Login" styleClass="nav-link"/>
-                    </h:panelGroup>
-                </nav>
+<div class="app-container">
+
+    <!-- ══════════════════════════════════════
+         HEADER
+    ══════════════════════════════════════ -->
+    <header class="app-header">
+        <div class="header-inner">
+
+            <!-- Left: logo + title -->
+            <div class="header-brand">
+                <span class="header-logo">&#9917;</span>
+                <span class="header-title">World Cup Predictor</span>
             </div>
-        </header>
-        <main class="app-main">
-            <ui:insert name="content"/>
-        </main>
-        <footer class="app-footer">
-            <p>World Cup Predictor &#8212; Clean Architecture with Jakarta Faces (JSF)</p>
-        </footer>
-    </div>
 
-    <!-- ═══════════════════════════════════════════════════════════════════
-         Session Enforcement Script
-         Runs on every page load for every logged-in user (user AND admin).
+            <!-- Center: nav links -->
+            <input type="checkbox" id="nav-toggle" class="nav-toggle"/>
+            <label for="nav-toggle" class="nav-toggle-label" title="Toggle navigation">&#9776;</label>
 
-         LAYER 1 — Multi-browser detection (localStorage, shared across tabs)
-           browserToken is issued by the server on every fresh login.
-           localStorage persists across tabs in the same browser.
-           When user logs in on Browser B, token changes → Browser A detects mismatch
-           on next page load or within 15 s heartbeat → redirected to login.
+            <nav class="app-nav">
+                <h:link outcome="index" value="Dashboard"
+                        styleClass="nav-link#{navBean.isActive('index') ? ' active' : ''}"/>
+                <h:link outcome="groups" value="Groups"
+                        styleClass="nav-link#{navBean.isActive('groups') ? ' active' : ''}"/>
+                <h:link outcome="matches" value="Matches"
+                        styleClass="nav-link#{navBean.isActive('matches') ? ' active' : ''}"/>
+                <h:link outcome="predictions" value="Predictions"
+                        styleClass="nav-link#{navBean.isActive('predictions') ? ' active' : ''}"/>
+                <h:link outcome="leaderboard" value="Leaderboard"
+                        styleClass="nav-link#{navBean.isActive('leaderboard') ? ' active' : ''}"/>
+                <h:panelGroup rendered="#{authBean.admin}" layout="inline">
+                    <h:link outcome="users" value="Users"
+                            styleClass="nav-link#{navBean.isActive('users') ? ' active' : ''}"/>
+                    <h:link outcome="admin-whitelist" value="Whitelist"
+                            styleClass="nav-link#{navBean.isActive('admin-whitelist') ? ' active' : ''}"/>
+                    <h:link outcome="admin-rounds" value="Rounds"
+                            styleClass="nav-link#{navBean.isActive('admin-rounds') ? ' active' : ''}"/>
+                    <h:link outcome="admin-groups" value="Groups Admin"
+                            styleClass="nav-link#{navBean.isActive('admin-groups') ? ' active' : ''}"/>
+                    <h:link outcome="admin-matches" value="Matches Admin"
+                            styleClass="nav-link#{navBean.isActive('admin-matches') ? ' active' : ''}"/>
+                    <h:link outcome="admin-audit" value="&#128274; Audit"
+                            styleClass="nav-link#{navBean.isActive('admin-audit') ? ' active' : ''}"/>
+                </h:panelGroup>
+            </nav>
 
-         LAYER 2 — Multi-tab / single-tab enforcement (localStorage leader lock)
-           Only ONE tab may hold the active-tab lock at a time.
-           Lock key: wcp_tab_lock  →  value: { tabId, renewedAt }
-           Lock TTL: 4 seconds (tab must renew every 2 s to keep ownership).
+            <!-- Right: theme toggle + user chip + logout -->
+            <div class="header-right">
+                <button id="themeToggle" class="theme-toggle-btn" title="Toggle dark mode"
+                        onclick="toggleTheme()">&#127769;</button>
 
-           On page load:
-             a) If no lock exists → claim it (I am the first tab).
-             b) If lock exists AND tabId == mine → I already own it, renew.
-             c) If lock exists AND tabId != mine AND lock is fresh (< 4 s old)
-                → CONFLICT: another tab is alive → I must leave NOW.
-             d) If lock exists AND tabId != mine AND lock is STALE (≥ 4 s old)
-                → The other tab closed without releasing → I can claim it.
+                <h:panelGroup rendered="#{authBean.loggedIn}" layout="inline">
+                    <span class="user-chip">
+                        <span class="user-chip-icon">&#128100;</span>
+                        <span class="user-chip-name">
+                            <h:outputText value="#{authBean.currentUsername}"/>
+                        </span>
+                    </span>
+                    <h:form styleClass="inline-form">
+                        <h:commandLink value="Sign out"
+                                       action="#{authBean.logout}"
+                                       styleClass="nav-link nav-link-logout"/>
+                    </h:form>
+                </h:panelGroup>
+                <h:panelGroup rendered="#{not authBean.loggedIn}" layout="inline">
+                    <h:link outcome="login" value="Login" styleClass="nav-link"/>
+                </h:panelGroup>
+            </div>
 
-         LAYER 3 — Server heartbeat every 15 s
-           Polls /session-heartbeat to detect server-side displacement.
-    ═══════════════════════════════════════════════════════════════════ -->
-    <h:panelGroup rendered="#{authBean.loggedIn}" layout="block">
-        <script type="text/javascript">
-        //<![CDATA[
-        (function() {
+        </div>
+    </header>
 
-            // ── Constants ────────────────────────────────────────────────
-            var SERVER_TOKEN  = '#{authBean.browserToken}';
-            var LS_BROWSER    = 'wcp_browser_token';
-            var LS_TAB_LOCK   = 'wcp_tab_lock';
-            var LOCK_TTL_MS   = 4000;   // lock expires after 4 s of no renewal
-            var RENEW_MS      = 2000;   // active tab renews lock every 2 s
-            var HEARTBEAT_MS  = 15000;  // server poll every 15 s
+    <!-- ══════════════════════════════════════
+         MAIN CONTENT
+    ══════════════════════════════════════ -->
+    <main class="app-main">
+        <ui:insert name="content"/>
+    </main>
 
-            // Guard: once we start redirecting, don't do it again
-            var redirecting = false;
+    <footer class="app-footer">
+        <p>World Cup Predictor &#8212; QNB Group</p>
+    </footer>
+</div>
 
-            // ── Validate server token is present ─────────────────────────
-            if (!SERVER_TOKEN || SERVER_TOKEN === 'null' || SERVER_TOKEN === '') {
-                // browserToken not yet available — this should not happen after login,
-                // but if it does, do NOT silently exit: reload to force re-evaluation
-                console.warn('[WCP] browserToken missing from server — session guard inactive');
-                return;
-            }
+<!-- ══════════════════════════════════════
+     HIDDEN TAB TOKEN (Task 2 — single-tab enforcement)
+     Placed outside all forms. Read by tab-append JS below.
+══════════════════════════════════════ -->
+<h:panelGroup rendered="#{authBean.loggedIn}" layout="block">
+    <input type="hidden" id="globalTabToken" value="#{authBean.currentTabToken}"/>
+</h:panelGroup>
 
-            // ── Unique per-tab ID (survives navigations within same tab) ─
-            var MY_TAB_ID = sessionStorage.getItem('wcp_tab_id');
-            if (!MY_TAB_ID) {
-                MY_TAB_ID = 'tab_' + Math.random().toString(36).substr(2, 12)
-                                   + '_' + Date.now();
-                sessionStorage.setItem('wcp_tab_id', MY_TAB_ID);
-            }
+<!-- ══════════════════════════════════════
+     SCRIPTS
+══════════════════════════════════════ -->
+<script type="text/javascript">
+//<![CDATA[
 
-            // ── Build login URL robustly ──────────────────────────────────
-            var ctxPath = '';
+// ── Theme toggle ──────────────────────────────────────────────────────────
+function toggleTheme() {
+    var html = document.documentElement;
+    var btn  = document.getElementById('themeToggle');
+    var isDark = html.getAttribute('data-theme') === 'dark';
+    if (isDark) {
+        html.removeAttribute('data-theme');
+        if (btn) btn.innerHTML = '&#127769;';
+        setCookie('wcPredictor_theme', 'light', 365);
+    } else {
+        html.setAttribute('data-theme', 'dark');
+        if (btn) btn.innerHTML = '&#9728;&#65039;';
+        setCookie('wcPredictor_theme', 'dark', 365);
+    }
+}
+
+function setCookie(name, value, days) {
+    var expires = '';
+    if (days) {
+        var d = new Date();
+        d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
+        expires = '; expires=' + d.toUTCString();
+    }
+    document.cookie = name + '=' + value + expires + '; path=/';
+}
+
+// Sync toggle icon with current theme on load
+(function() {
+    var btn = document.getElementById('themeToggle');
+    if (!btn) return;
+    if (document.documentElement.getAttribute('data-theme') === 'dark') {
+        btn.innerHTML = '&#9728;&#65039;';
+    }
+})();
+
+// ── Tab token: append to every anchor href and every form action (Task 2) ──
+document.addEventListener('DOMContentLoaded', function() {
+    var tokenEl = document.getElementById('globalTabToken');
+    if (!tokenEl) return;
+    var token = tokenEl.value;
+    if (!token || token === '' || token === 'null') return;
+
+    // Append to all anchor hrefs
+    var anchors = document.querySelectorAll('a[href]');
+    for (var i = 0; i < anchors.length; i++) {
+        var a = anchors[i];
+        var href = a.getAttribute('href');
+        if (!href || href.indexOf('#') === 0 || href.indexOf('javascript') === 0
+                || href.indexOf('login.xhtml') >= 0
+                || href.indexOf('session-conflict.xhtml') >= 0) continue;
+        var sep = href.indexOf('?') >= 0 ? '&' : '?';
+        a.setAttribute('href', href + sep + 'tabToken=' + encodeURIComponent(token));
+    }
+});
+
+// ── Session enforcement (multi-browser + multi-tab) ──────────────────────
+(function() {
+    var SERVER_TOKEN  = '#{authBean.browserToken}';
+    var LS_BROWSER    = 'wcp_browser_token';
+    var LS_TAB_LOCK   = 'wcp_tab_lock';
+    var LOCK_TTL_MS   = 4000;
+    var RENEW_MS      = 2000;
+    var HEARTBEAT_MS  = 15000;
+    var redirecting   = false;
+
+    if (!SERVER_TOKEN || SERVER_TOKEN === 'null' || SERVER_TOKEN === '') return;
+
+    var MY_TAB_ID = sessionStorage.getItem('wcp_tab_id');
+    if (!MY_TAB_ID) {
+        MY_TAB_ID = 'tab_' + Math.random().toString(36).substr(2, 12) + '_' + Date.now();
+        sessionStorage.setItem('wcp_tab_id', MY_TAB_ID);
+    }
+
+    var pathParts = window.location.pathname.split('/');
+    var ctxPath = (pathParts.length > 1 && pathParts[1]) ? '/' + pathParts[1] : '';
+    var loginUrl = window.location.origin + ctxPath + '/login.xhtml';
+
+    function doRedirect(reason) {
+        if (redirecting) return;
+        redirecting = true;
+        if (window._wcpRenewTimer) { clearInterval(window._wcpRenewTimer); window._wcpRenewTimer = null; }
+        window.location.replace(loginUrl + '?reason=' + reason);
+    }
+
+    function readLock() {
+        try { var r = localStorage.getItem(LS_TAB_LOCK); return r ? JSON.parse(r) : null; }
+        catch(e) { return null; }
+    }
+    function writeLock() {
+        try { localStorage.setItem(LS_TAB_LOCK, JSON.stringify({ tabId: MY_TAB_ID, renewedAt: Date.now() })); }
+        catch(e) {}
+    }
+    function releaseLock() {
+        try { var l = readLock(); if (l && l.tabId === MY_TAB_ID) localStorage.removeItem(LS_TAB_LOCK); }
+        catch(e) {}
+    }
+    function isLockStale(lock) { return !lock || (Date.now() - lock.renewedAt) >= LOCK_TTL_MS; }
+
+    function claimLock() {
+        writeLock();
+        if (window._wcpRenewTimer) clearInterval(window._wcpRenewTimer);
+        window._wcpRenewTimer = setInterval(function() {
+            if (redirecting) return;
+            var cur = readLock();
+            if (cur && cur.tabId !== MY_TAB_ID) {
+                alert('Session conflict detected. This tab will be closed.');
+                doRedirect('tab_conflict');
+            } else { writeLock(); }
+        }, RENEW_MS);
+    }
+
+    // Layer 1: multi-browser
+    var stored = localStorage.getItem(LS_BROWSER);
+    if (!stored) {
+        localStorage.setItem(LS_BROWSER, SERVER_TOKEN);
+    } else if (stored !== SERVER_TOKEN) {
+        localStorage.setItem(LS_BROWSER, SERVER_TOKEN);
+        sessionStorage.removeItem('wcp_tab_id');
+        alert('Your account has been signed in from another location.\nThis tab will be redirected to login.');
+        doRedirect('session_conflict');
+        return;
+    }
+
+    // Layer 2: single-tab lock
+    var lock = readLock();
+    if (!lock || isLockStale(lock)) {
+        claimLock();
+    } else if (lock.tabId === MY_TAB_ID) {
+        claimLock();
+    } else {
+        alert('This account is already open in another tab.\nOnly one tab is allowed.\nThis tab will be redirected to login.');
+        doRedirect('tab_conflict');
+        return;
+    }
+
+    window.addEventListener('beforeunload', function() {
+        releaseLock();
+        if (window._wcpRenewTimer) { clearInterval(window._wcpRenewTimer); window._wcpRenewTimer = null; }
+    });
+
+    window.addEventListener('storage', function(evt) {
+        if (redirecting) return;
+        if (evt.key === LS_TAB_LOCK && evt.newValue) {
             try {
-                // Extract context path: everything before /world-cup-predictor/ or just origin
-                var pathParts = window.location.pathname.split('/');
-                // pathParts[1] is the context root (e.g. 'world-cup-predictor')
-                if (pathParts.length > 1 && pathParts[1]) {
-                    ctxPath = '/' + pathParts[1];
+                var nl = JSON.parse(evt.newValue);
+                if (nl.tabId !== MY_TAB_ID) {
+                    alert('Another tab has taken this session.\nThis tab will be redirected to login.');
+                    doRedirect('tab_conflict');
                 }
             } catch(e) {}
-            var loginUrl = window.location.origin + ctxPath + '/login.xhtml';
+        }
+        if (evt.key === LS_BROWSER && evt.newValue && evt.newValue !== SERVER_TOKEN) {
+            alert('Your account has been signed in from another location.\nThis tab will be redirected to login.');
+            doRedirect('session_conflict');
+        }
+    });
 
-            function doRedirect(reason) {
-                if (redirecting) return;
-                redirecting = true;
-                if (window._wcpRenewTimer) { clearInterval(window._wcpRenewTimer); window._wcpRenewTimer = null; }
-                window.location.replace(loginUrl + '?reason=' + reason);
-            }
-
-            // ── Lock helpers ──────────────────────────────────────────────
-            function readLock() {
-                try { var r = localStorage.getItem(LS_TAB_LOCK); return r ? JSON.parse(r) : null; }
-                catch(e) { return null; }
-            }
-
-            function writeLock() {
+    // Layer 3: server heartbeat
+    setInterval(function() {
+        if (redirecting) return;
+        try {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', ctxPath + '/session-heartbeat', true);
+            xhr.onload = function() {
+                if (redirecting || xhr.status !== 200) return;
                 try {
-                    localStorage.setItem(LS_TAB_LOCK,
-                        JSON.stringify({ tabId: MY_TAB_ID, renewedAt: Date.now() }));
-                } catch(e) {}
-            }
-
-            function releaseLock() {
-                try {
-                    var lock = readLock();
-                    if (lock && lock.tabId === MY_TAB_ID) {
-                        localStorage.removeItem(LS_TAB_LOCK);
+                    var d = JSON.parse(xhr.responseText);
+                    if (d.status && d.status !== 'ok') {
+                        releaseLock();
+                        var m = d.status === 'displaced'
+                            ? 'Your account was signed in from another location.'
+                            : 'Your session has expired.';
+                        alert(m + '\nYou will be redirected to login.');
+                        doRedirect(d.status);
                     }
-                } catch(e) {}
-            }
+                } catch(pe) {}
+            };
+            xhr.send();
+        } catch(e) {}
+    }, HEARTBEAT_MS);
 
-            function isLockStale(lock) {
-                return !lock || (Date.now() - lock.renewedAt) >= LOCK_TTL_MS;
-            }
+})();
+//]]>
+</script>
 
-            function claimLock() {
-                writeLock();
-                if (window._wcpRenewTimer) clearInterval(window._wcpRenewTimer);
-                window._wcpRenewTimer = setInterval(function() {
-                    if (redirecting) return;
-                    var current = readLock();
-                    if (current && current.tabId !== MY_TAB_ID) {
-                        // Another tab stole the lock — should not happen, but evict
-                        alert('Session conflict detected. This tab will close.');
-                        doRedirect('tab_conflict');
-                    } else {
-                        writeLock();
-                    }
-                }, RENEW_MS);
-            }
-
-            // ── LAYER 1: Multi-browser detection ─────────────────────────
-            var storedBrowserToken = localStorage.getItem(LS_BROWSER);
-            if (!storedBrowserToken) {
-                localStorage.setItem(LS_BROWSER, SERVER_TOKEN);
-            } else if (storedBrowserToken !== SERVER_TOKEN) {
-                localStorage.setItem(LS_BROWSER, SERVER_TOKEN);
-                sessionStorage.removeItem('wcp_tab_id');
-                alert('Your account has been signed in from another location.\n' +
-                      'This tab will be redirected to the login page.');
-                doRedirect('session_conflict');
-                return;
-            }
-
-            // ── LAYER 2: Single-tab leader lock ───────────────────────────
-            var lock = readLock();
-
-            if (!lock || isLockStale(lock)) {
-                // No active tab or stale lock — claim it
-                claimLock();
-
-            } else if (lock.tabId === MY_TAB_ID) {
-                // I already own it (same tab, page navigation) — just renew
-                claimLock();
-
-            } else {
-                // Fresh lock owned by a DIFFERENT tab → I am the intruder → block NOW
-                alert('This account is already open in another tab.\n' +
-                      'Only one tab is allowed per session.\n' +
-                      'This tab will be redirected to the login page.');
-                doRedirect('tab_conflict');
-                return;
-            }
-
-            // Release on tab close/navigate away
-            window.addEventListener('beforeunload', function() {
-                releaseLock();
-                if (window._wcpRenewTimer) { clearInterval(window._wcpRenewTimer); window._wcpRenewTimer = null; }
-            });
-
-            // storage event fires in OTHER tabs when localStorage changes
-            window.addEventListener('storage', function(evt) {
-                if (redirecting) return;
-                if (evt.key === LS_TAB_LOCK) {
-                    if (!evt.newValue) return; // lock was removed (other tab closed) — fine
-                    try {
-                        var newLock = JSON.parse(evt.newValue);
-                        if (newLock.tabId !== MY_TAB_ID) {
-                            // Another tab claimed the lock while I was alive
-                            alert('Another tab has taken this session.\nThis tab will be redirected to the login page.');
-                            doRedirect('tab_conflict');
-                        }
-                    } catch(e2) {}
-                }
-                if (evt.key === LS_BROWSER && evt.newValue && evt.newValue !== SERVER_TOKEN) {
-                    alert('Your account has been signed in from another location.\n' +
-                          'This tab will be redirected to the login page.');
-                    doRedirect('session_conflict');
-                }
-            });
-
-            // ── LAYER 3: Server-side heartbeat ────────────────────────────
-            setInterval(function() {
-                if (redirecting) return;
-                try {
-                    var xhr = new XMLHttpRequest();
-                    xhr.open('GET', ctxPath + '/session-heartbeat', true);
-                    xhr.onload = function() {
-                        if (redirecting) return;
-                        if (xhr.status === 200) {
-                            try {
-                                var data = JSON.parse(xhr.responseText);
-                                if (data.status && data.status !== 'ok') {
-                                    releaseLock();
-                                    var msg = data.status === 'displaced'
-                                        ? 'Your account was signed in from another location.'
-                                        : 'Your session has expired.';
-                                    alert(msg + '\nYou will be redirected to the login page.');
-                                    doRedirect(data.status);
-                                }
-                            } catch(pe) {}
-                        }
-                    };
-                    xhr.send();
-                } catch(e) {}
-            }, HEARTBEAT_MS);
-
-        })();
-        //]]>
-        </script>
-    </h:panelGroup>
 </h:body>
 </html>

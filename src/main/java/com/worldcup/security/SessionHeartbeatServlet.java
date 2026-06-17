@@ -44,15 +44,13 @@ public class SessionHeartbeatServlet extends HttpServlet {
 
         try {
             ValidationResult result = userSessionService.validateAndTouch(session.getId());
-            String status = switch (result) {
-                case VALID      -> "ok";
-                case DISPLACED  -> "displaced";
-                case EXPIRED    -> "expired";
-                case INVALID    -> "invalid";
-            };
+            String status;
+            if (result == ValidationResult.VALID)      { status = "ok"; }
+            else if (result == ValidationResult.DISPLACED) { status = "displaced"; }
+            else if (result == ValidationResult.EXPIRED)   { status = "expired"; }
+            else                                            { status = "invalid"; }
             resp.getWriter().write("{\"status\":\"" + status + "\"}");
         } catch (Exception e) {
-            // On error assume OK — don't lock users out due to transient DB issues
             resp.getWriter().write("{\"status\":\"ok\"}");
         }
     }

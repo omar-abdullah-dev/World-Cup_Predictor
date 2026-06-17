@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Session Conflict - World Cup Predictor</title>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1A1F2E 0%, #0D1117 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .conflict-card {
+            background: #FFFFFF;
+            border-radius: 16px;
+            padding: 48px 40px;
+            max-width: 480px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .conflict-icon {
+            font-size: 3.5em;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .conflict-title {
+            font-size: 1.6em;
+            font-weight: 700;
+            color: #0D1117;
+            margin-bottom: 12px;
+        }
+
+        .conflict-message {
+            color: #4B5563;
+            font-size: 1em;
+            line-height: 1.7;
+            margin-bottom: 32px;
+        }
+
+        .conflict-message strong {
+            color: #0D1117;
+        }
+
+        .btn-return {
+            display: inline-block;
+            padding: 14px 32px;
+            background: #1D6BF3;
+            color: #FFFFFF;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1em;
+            transition: background 0.2s;
+        }
+
+        .btn-return:hover {
+            background: #1558D6;
+        }
+
+        .conflict-footer {
+            margin-top: 24px;
+            font-size: 0.82em;
+            color: #9CA3AF;
+        }
+    </style>
+</head>
+<body>
+    <div class="conflict-card">
+        <span class="conflict-icon">&#9888;</span>
+        <h1 class="conflict-title">Session Conflict</h1>
+        <p class="conflict-message">
+            This application is <strong>already open in another tab</strong>.<br/>
+            Only one active tab is allowed per session.<br/><br/>
+            Please close this tab and return to your original session,
+            or log in again to start a new session.
+        </p>
+        <a href="login.xhtml" class="btn-return">&#8594; Go to Login</a>
+        <p class="conflict-footer">World Cup Predictor &mdash; QNB Group</p>
+    </div>
+</body>
+</html>

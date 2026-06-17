@@ -90,24 +90,22 @@ public class AdminAuditBean implements Serializable {
 
     public String sessionStatusBadge(UserSession.Status status) {
         if (status == null) return "badge-default";
-        return switch (status) {
-            case ACTIVE     -> "badge-active";
-            case TERMINATED -> "badge-terminated";
-            case EXPIRED    -> "badge-expired";
-            case DISPLACED  -> "badge-displaced";
-        };
+        if (status == UserSession.Status.ACTIVE)     return "badge-active";
+        if (status == UserSession.Status.TERMINATED) return "badge-terminated";
+        if (status == UserSession.Status.EXPIRED)    return "badge-expired";
+        if (status == UserSession.Status.DISPLACED)  return "badge-displaced";
+        return "badge-default";
     }
 
     public String eventBadgeClass(String opmaj) {
         if (opmaj == null) return "";
-        return switch (opmaj) {
-            case "LOGIN"               -> "ev-login";
-            case "LOGOUT"              -> "ev-logout";
-            case "PREDICTION_CREATED"  -> "ev-pred-new";
-            case "PREDICTION_UPDATED"  -> "ev-pred-upd";
-            case "SESSION_INVALIDATED" -> "ev-session-inv";
-            default                    -> "ev-default";
-        };
+        if ("LOGIN".equals(opmaj))               return "ev-login";
+        if ("LOGOUT".equals(opmaj))              return "ev-logout";
+        if ("PREDICTION_CREATED".equals(opmaj))  return "ev-pred-new";
+        if ("PREDICTION_UPDATED".equals(opmaj))  return "ev-pred-upd";
+        if ("SESSION_INVALIDATED".equals(opmaj)) return "ev-session-inv";
+        if ("SESSION_CONFLICT".equals(opmaj))    return "ev-session-inv";
+        return "ev-default";
     }
 
     // ── Accessors ─────────────────────────────────────────────────────────
@@ -131,6 +129,6 @@ public class AdminAuditBean implements Serializable {
     // ── Private helpers ───────────────────────────────────────────────────
 
     private String nullIfBlank(String s) {
-        return (s == null || s.isBlank()) ? null : s;
+        return (s == null || s.trim().isEmpty()) ? null : s;
     }
 }

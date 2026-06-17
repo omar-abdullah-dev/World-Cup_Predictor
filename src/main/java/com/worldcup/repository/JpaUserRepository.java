@@ -36,25 +36,23 @@ public class JpaUserRepository implements UserRepository {
 
     @Override
     public Optional<User> findByUsername(String username) {
-
         System.out.println("QUERY USERNAME = [" + username + "]");
-
-
-
-        return em.createQuery(
-                        "SELECT u FROM User u WHERE u.username = :username",
-                        User.class)
+        List<User> results = em.createQuery(
+                "SELECT u FROM User u WHERE u.username = :username",
+                User.class)
                 .setParameter("username", username)
-                .getResultStream()
-                .findFirst();
+                .getResultList();
+        return results.isEmpty() ? Optional.<User>empty() : Optional.of(results.get(0));
     }
 
     @Override
     public Optional<User> findByAdUsername(String adUsername) {
-        return em.createQuery("SELECT u FROM User u WHERE u.adUsername = :adUsername", User.class)
+        List<User> results = em.createQuery(
+                "SELECT u FROM User u WHERE u.adUsername = :adUsername",
+                User.class)
                 .setParameter("adUsername", adUsername)
-                .getResultStream()
-                .findFirst();
+                .getResultList();
+        return results.isEmpty() ? Optional.<User>empty() : Optional.of(results.get(0));
     }
 
     @Override
