@@ -49,10 +49,16 @@ CREATE INDEX idx_predictions_user_id ON predictions(user_id);
 CREATE INDEX idx_predictions_match_id ON predictions(match_id);
 CREATE INDEX idx_predictions_user_match ON predictions(user_id, match_id);
 
--- Insert default admin user (password: admin123 - PBKDF2 hashed)
--- Note: In production, replace this with a proper hash
+-- Insert default admin and a sample normal user
+-- Passwords are PBKDF2-SHA256 hashes compatible with PasswordService
+-- Admin: username='admin' password='admin123'
+-- User:  username='user'  password='user123'
 INSERT INTO users (username, password_hash, role, is_approved, total_points)
-VALUES ('admin', '$2a$10$slYQmyNdGzin7olVN3p5Be7DlH.PKZbv5H8KnzzVgXXbVxzy2S8zS', 'ADMIN', TRUE, 0)
+VALUES ('admin', '65536:tcTdRNEDTiZEg0yXZO/MOw==:AFefJ0SCNwpXR0FS/H/A3suzsMYl3sQq7SfU8apZ6f4=', 'ADMIN', TRUE, 0)
+ON CONFLICT (username) DO NOTHING;
+
+INSERT INTO users (username, password_hash, role, is_approved, total_points)
+VALUES ('user', '65536:zxeM9WtnGflhCHcZmGDZ8g==:p8HtUIODa0bSBCYuFon2VVcZFslPCZelCoEzI+nooLU=', 'NORMAL_USER', TRUE, 0)
 ON CONFLICT (username) DO NOTHING;
 
 -- Insert sample matches for 2026 World Cup (Qatar/USA)
