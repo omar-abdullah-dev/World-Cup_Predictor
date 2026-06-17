@@ -501,3 +501,64 @@ body {
 /* ── WhiteList table rows ── */
 .table-row-even { background:var(--bg-card); }
 .table-row-odd  { background:var(--bg-secondary); }
+
+/* ═══════════════════════════════════════════════════════════════
+   SUPPLEMENTAL STYLES — classes referenced by XHTML pages
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Predictions: result score display ── */
+.pred-score-wrap-result {
+  flex:1.5; display:flex; align-items:center; justify-content:center; gap:8px;
+  min-width:100px;
+}
+.match-score-box {
+  display:inline-flex; align-items:center; justify-content:center;
+  min-width:36px; height:36px; padding:0 10px;
+  border:1px solid var(--border-color); border-radius:var(--radius-sm);
+  background:var(--bg-secondary); font-weight:700; color:var(--text-primary);
+  font-size:1.1em;
+}
+.match-score-box.winner {
+  background:rgba(29,107,243,0.15); border-color:var(--accent-blue);
+  color:var(--accent-blue);
+}
+.match-score-sep {
+  font-weight:700; color:var(--text-muted); font-size:1.1em; margin:0 4px;
+}
+.pred-hint-muted {
+  color:var(--text-muted); font-style:italic; font-size:0.76em;
+}
+.pred-points-inline {
+  flex-shrink:0;
+}
+
+/* ── Dashboard: leader card ── */
+.leader-card { padding:20px 24px; }
+.leader-info  { display:flex; align-items:center; gap:16px; margin-top:8px; }
+.leader-rank  { flex-shrink:0; }
+.leader-name  { font-size:1.2em; font-weight:700; color:var(--text-primary); margin-bottom:4px; }
+
+/* ── Dashboard / Groups: scoring badge large ── */
+.scoring-badge-lg { font-size:1em !important; padding:6px 16px !important; margin-bottom:8px; display:inline-block; }
+
+/* ── Matches page: dashboard header row ── */
+.match-dash-header {
+  display:flex; justify-content:space-between; align-items:flex-start;
+  flex-wrap:wrap; gap:12px; margin-bottom:20px;
+}
+.match-dash-title-block { margin-bottom:0; }
+.match-dash-create-btn  { white-space:nowrap; }
+.match-dash-create-card { margin-bottom:20px; }
+.match-dash-list-card   { padding:20px 24px; }
+
+/* ── Matches page: result forms ── */
+.match-dash-result-form { width:100%; }
+.match-dash-save-row    { padding:10px 16px 14px; display:flex; justify-content:flex-end; }
+.match-dash-delete-form { display:inline; }
+
+/* ── Matches page: score display inside admin edit rows ── */
+.match-dash-score-box { display:inline-flex; align-items:center; justify-content:center;
+  min-width:34px; height:34px; padding:0 10px; border:1px solid var(--border-color);
+  border-radius:var(--radius-sm); background:var(--bg-secondary); font-weight:700;
+  color:var(--text-primary);
+}

@@ -67,6 +67,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.12.1</version>
                 <configuration>
+                    <!-- Java 8 / WebLogic migration compatibility -->
                     <source>1.8</source>
                     <target>1.8</target>
                 </configuration>

@@ -190,35 +190,59 @@ public class PredictionBean implements Serializable {
     public String getFlagForTeam(String teamName) {
         if (teamName == null) return "\uD83C\uDFF3";
         String t = teamName.trim().toLowerCase();
-        if ("brazil".equals(t))        return "\uD83C\uDDE7\uD83C\uDDF7";
-        if ("argentina".equals(t))     return "\uD83C\uDDE6\uD83C\uDDF7";
-        if ("france".equals(t))        return "\uD83C\uDDEB\uD83C\uDDF7";
-        if ("germany".equals(t))       return "\uD83C\uDDE9\uD83C\uDDEA";
-        if ("spain".equals(t))         return "\uD83C\uDDEA\uD83C\uDDF8";
-        if ("portugal".equals(t))      return "\uD83C\uDDF5\uD83C\uDDF9";
-        if ("netherlands".equals(t))   return "\uD83C\uDDF3\uD83C\uDDF1";
-        if ("italy".equals(t))         return "\uD83C\uDDEE\uD83C\uDDF9";
-        if ("croatia".equals(t))       return "\uD83C\uDDED\uD83C\uDDF7";
-        if ("morocco".equals(t))       return "\uD83C\uDDF2\uD83C\uDDE6";
-        if ("senegal".equals(t))       return "\uD83C\uDDF8\uD83C\uDDF3";
-        if ("qatar".equals(t))         return "\uD83C\uDDF6\uD83C\uDDE6";
-        if ("ecuador".equals(t))       return "\uD83C\uDDEA\uD83C\uDDE8";
+        // North & Central America / Caribbean
         if ("usa".equals(t) || "united states".equals(t)) return "\uD83C\uDDFA\uD83C\uDDF8";
-        if ("japan".equals(t))         return "\uD83C\uDDEF\uD83C\uDDF5";
-        if ("south korea".equals(t))   return "\uD83C\uDDF0\uD83C\uDDF7";
-        if ("australia".equals(t))     return "\uD83C\uDDE6\uD83C\uDDFA";
-        if ("mexico".equals(t))        return "\uD83C\uDDF2\uD83C\uDDFD";
-        if ("nigeria".equals(t))       return "\uD83C\uDDF3\uD83C\uDDEC";
-        if ("cameroon".equals(t))      return "\uD83C\uDDE8\uD83C\uDDF2";
-        if ("egypt".equals(t))         return "\uD83C\uDDEA\uD83C\uDDEC";
-        if ("saudi arabia".equals(t))  return "\uD83C\uDDF8\uD83C\uDDE6";
-        if ("ghana".equals(t))         return "\uD83C\uDDEC\uD83C\uDDED";
-        if ("switzerland".equals(t))   return "\uD83C\uDDE8\uD83C\uDDED";
-        if ("belgium".equals(t))       return "\uD83C\uDDE7\uD83C\uDDEA";
-        if ("poland".equals(t))        return "\uD83C\uDDF5\uD83C\uDDF1";
-        if ("uruguay".equals(t))       return "\uD83C\uDDFA\uD83C\uDDFE";
-        if ("canada".equals(t))        return "\uD83C\uDDE8\uD83C\uDDE6";
-        if ("iran".equals(t))          return "\uD83C\uDDEE\uD83C\uDDF7";
+        if ("canada".equals(t))         return "\uD83C\uDDE8\uD83C\uDDE6";
+        if ("mexico".equals(t))         return "\uD83C\uDDF2\uD83C\uDDFD";
+        if ("costa rica".equals(t))     return "\uD83C\uDDE8\uD83C\uDDF7";
+        if ("panama".equals(t))         return "\uD83C\uDDF5\uD83C\uDDE6";
+        if ("jamaica".equals(t))        return "\uD83C\uDDEF\uD83C\uDDF2";
+        if ("honduras".equals(t))       return "\uD83C\uDDED\uD83C\uDDF3";
+        if ("el salvador".equals(t))    return "\uD83C\uDDF8\uD83C\uDDFB";
+        // South America
+        if ("argentina".equals(t))      return "\uD83C\uDDE6\uD83C\uDDF7";
+        if ("brazil".equals(t))         return "\uD83C\uDDE7\uD83C\uDDF7";
+        if ("colombia".equals(t))       return "\uD83C\uDDE8\uD83C\uDDF4";
+        if ("uruguay".equals(t))        return "\uD83C\uDDFA\uD83C\uDDFE";
+        if ("ecuador".equals(t))        return "\uD83C\uDDEA\uD83C\uDDE8";
+        if ("peru".equals(t))           return "\uD83C\uDDF5\uD83C\uDDEA";
+        if ("chile".equals(t))          return "\uD83C\uDDE8\uD83C\uDDF1";
+        if ("paraguay".equals(t))       return "\uD83C\uDDF5\uD83C\uDDFE";
+        if ("venezuela".equals(t))      return "\uD83C\uDDFB\uD83C\uDDEA";
+        // Europe
+        if ("france".equals(t))         return "\uD83C\uDDEB\uD83C\uDDF7";
+        if ("england".equals(t))        return "\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC65\uDB40\uDC6E\uDB40\uDC67\uDB40\uDC7F";
+        if ("spain".equals(t))          return "\uD83C\uDDEA\uD83C\uDDF8";
+        if ("germany".equals(t))        return "\uD83C\uDDE9\uD83C\uDDEA";
+        if ("portugal".equals(t))       return "\uD83C\uDDF5\uD83C\uDDF9";
+        if ("italy".equals(t))          return "\uD83C\uDDEE\uD83C\uDDF9";
+        if ("netherlands".equals(t))    return "\uD83C\uDDF3\uD83C\uDDF1";
+        if ("belgium".equals(t))        return "\uD83C\uDDE7\uD83C\uDDEA";
+        if ("croatia".equals(t))        return "\uD83C\uDDED\uD83C\uDDF7";
+        if ("poland".equals(t))         return "\uD83C\uDDF5\uD83C\uDDF1";
+        if ("switzerland".equals(t))    return "\uD83C\uDDE8\uD83C\uDDED";
+        if ("wales".equals(t))          return "\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC77\uDB40\uDC6C\uDB40\uDC73\uDB40\uDC7F";
+        // Africa
+        if ("senegal".equals(t))        return "\uD83C\uDDF8\uD83C\uDDF3";
+        if ("morocco".equals(t))        return "\uD83C\uDDF2\uD83C\uDDE6";
+        if ("nigeria".equals(t))        return "\uD83C\uDDF3\uD83C\uDDEC";
+        if ("egypt".equals(t))          return "\uD83C\uDDEA\uD83C\uDDEC";
+        if ("algeria".equals(t))        return "\uD83C\uDDE9\uD83C\uDDFF";
+        if ("ivory coast".equals(t))    return "\uD83C\uDDE8\uD83C\uDDEE";
+        if ("ghana".equals(t))          return "\uD83C\uDDEC\uD83C\uDDED";
+        if ("cameroon".equals(t))       return "\uD83C\uDDE8\uD83C\uDDF2";
+        if ("tunisia".equals(t))        return "\uD83C\uDDF9\uD83C\uDDF3";
+        if ("mali".equals(t))           return "\uD83C\uDDF2\uD83C\uDDF1";
+        if ("burkina faso".equals(t))   return "\uD83C\uDDE7\uD83C\uDDEB";
+        if ("south africa".equals(t))   return "\uD83C\uDDFF\uD83C\uDDE6";
+        // Asia / Oceania / Middle East
+        if ("japan".equals(t))          return "\uD83C\uDDEF\uD83C\uDDF5";
+        if ("south korea".equals(t))    return "\uD83C\uDDF0\uD83C\uDDF7";
+        if ("iran".equals(t))           return "\uD83C\uDDEE\uD83C\uDDF7";
+        if ("australia".equals(t))      return "\uD83C\uDDE6\uD83C\uDDFA";
+        if ("saudi arabia".equals(t))   return "\uD83C\uDDF8\uD83C\uDDE6";
+        if ("qatar".equals(t))          return "\uD83C\uDDF6\uD83C\uDDE6";
+        if ("new zealand".equals(t))    return "\uD83C\uDDF3\uD83C\uDDFF";
         return "\uD83C\uDFF3";
     }
 
