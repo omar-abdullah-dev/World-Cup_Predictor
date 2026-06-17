@@ -11,17 +11,21 @@ public class WhitelistEntry {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "ad_username", nullable = false, unique = true)
     private String adUsername;
 
+    @Column(name = "employee_name")
     private String employeeName;
+
     private String email;
 
     @Column(nullable = false)
     private boolean enabled = true;
 
+    @Column(name = "added_at")
     private LocalDateTime addedAt = LocalDateTime.now();
 
+    @Column(name = "added_by_user_id")
     private Long addedByUserId;
 
     public WhitelistEntry() {}

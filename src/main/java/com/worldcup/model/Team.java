@@ -13,13 +13,13 @@ public class Team {
     @Column(nullable = false, unique = true)
     private String name;
 
-    @Column(length = 3, unique = true)
+    @Column(name = "short_code", length = 3, unique = true)
     private String shortCode;
 
-    // Path to the uploaded logo file (e.g. filesystem path or URL)
+    @Column(name = "logo_path")
     private String logoPath;
 
-    // Fallback emoji flag
+    @Column(name = "flag_emoji")
     private String flagEmoji;
 
     public Team() {}

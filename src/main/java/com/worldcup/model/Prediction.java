@@ -26,16 +26,16 @@ public class Prediction implements Serializable {
     @Column(name = "match_id", nullable = false)
     private Long matchId;
 
-    @Column(nullable = false)
+    @Column(name = "predicted_home_score", nullable = false)
     private int predictedHomeScore;
 
-    @Column(nullable = false)
+    @Column(name = "predicted_away_score", nullable = false)
     private int predictedAwayScore;
 
-    @Column(nullable = false)
+    @Column(name = "earned_points", nullable = false)
     private int earnedPoints;
 
-    @Column(nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at")

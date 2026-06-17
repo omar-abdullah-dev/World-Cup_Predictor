@@ -26,8 +26,9 @@
                  and change jta-data-source to match WebLogic JNDI name, e.g.:
                  <jta-data-source>jdbc/WorldCupDS</jta-data-source> -->
             <property name="hibernate.dialect" value="org.hibernate.dialect.PostgreSQLDialect"/>
-            <!-- Schema is managed manually via SQL migration scripts — Hibernate does NOT touch it -->
-            <property name="hibernate.hbm2ddl.auto" value="none"/>
+            <!-- Hibernate auto-manages schema: creates/updates tables from @Entity annotations.
+                 No Flyway/Liquibase. No manual SQL migration scripts needed. -->
+            <property name="hibernate.hbm2ddl.auto" value="update"/>
             <property name="hibernate.show_sql" value="false"/>
             <property name="hibernate.format_sql" value="false"/>
         </properties>
