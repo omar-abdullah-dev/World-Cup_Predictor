@@ -6,62 +6,182 @@
       xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
       xmlns:f="http://xmlns.jcp.org/jsf/core">
 <h:head>
+    <!-- ── Theme flash prevention: read cookie before CSS loads ── -->
+    <script type="text/javascript">
+    //<![CDATA[
+    (function() {
+        function getCookie(name) {
+            var v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+            return v ? v.pop() : null;
+        }
+        var theme = getCookie('wcPredictor_theme');
+        if (theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    })();
+    //]]>
+    </script>
+
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title><ui:insert name="title">World Cup Predictor</ui:insert></title>
     <h:outputStylesheet name="css/styles.css"/>
 </h:head>
 <h:body>
-    <div class="app-container">
-        <header class="app-header">
-            <div class="header-content">
-                <h1 class="app-title">
-                    <span class="title-icon">&#9917;</span> World Cup Predictor
-                </h1>
-                <input type="checkbox" id="nav-toggle" class="nav-toggle"/>
-                <label for="nav-toggle" class="nav-toggle-label" title="Toggle navigation">&#9776;</label>
-                <nav class="app-nav">
-                    <h:link outcome="index" value="Dashboard"
-                            styleClass="nav-link#{navBean.isActive('index') ? ' active' : ''}"/>
-                    <h:link outcome="groups" value="Groups"
-                            styleClass="nav-link#{navBean.isActive('groups') ? ' active' : ''}"/>
-                    <h:link outcome="matches" value="Matches"
-                            styleClass="nav-link#{navBean.isActive('matches') ? ' active' : ''}"/>
-                    <h:link outcome="predictions" value="Predictions"
-                            styleClass="nav-link#{navBean.isActive('predictions') ? ' active' : ''}"/>
-                    <h:link outcome="leaderboard" value="Leaderboard"
-                            styleClass="nav-link#{navBean.isActive('leaderboard') ? ' active' : ''}"/>
-                    <h:panelGroup rendered="#{authBean.admin}" layout="inline">
-                        <h:link outcome="users" value="Users"
-                                styleClass="nav-link#{navBean.isActive('users') ? ' active' : ''}"/>
-                        <h:link outcome="admin-whitelist" value="Admin Whitelist"
-                                styleClass="nav-link#{navBean.isActive('admin-whitelist') ? ' active' : ''}"/>
-                        <h:link outcome="admin-rounds" value="Admin Rounds"
-                                styleClass="nav-link#{navBean.isActive('admin-rounds') ? ' active' : ''}"/>
-                        <h:link outcome="admin-groups" value="Admin Groups"
-                                styleClass="nav-link#{navBean.isActive('admin-groups') ? ' active' : ''}"/>
-                        <h:link outcome="admin-matches" value="Admin Matches"
-                                styleClass="nav-link#{navBean.isActive('admin-matches') ? ' active' : ''}"/>
-                    </h:panelGroup>
-                    <h:panelGroup rendered="#{authBean.loggedIn}" layout="inline">
-                        <h:form styleClass="nav-logout-form" style="display:inline">
-                            <h:commandLink value="Logout (#{authBean.currentUsername})"
-                                          action="#{authBean.logout}"
-                                          styleClass="nav-link nav-link-logout"/>
-                        </h:form>
-                    </h:panelGroup>
-                    <h:panelGroup rendered="#{not authBean.loggedIn}" layout="inline">
-                        <h:link outcome="login" value="Login" styleClass="nav-link"/>
-                    </h:panelGroup>
-                </nav>
+<div class="app-container">
+
+    <!-- ══════════════════════════════════════
+         HEADER
+    ══════════════════════════════════════ -->
+    <header class="app-header">
+        <div class="header-inner">
+
+            <!-- Left: logo + title -->
+            <div class="header-brand">
+                <span class="header-logo">&#9917;</span>
+                <span class="header-title">World Cup Predictor</span>
             </div>
-        </header>
-        <main class="app-main">
-            <ui:insert name="content"/>
-        </main>
-        <footer class="app-footer">
-            <p>World Cup Predictor &#8212; Clean Architecture with Jakarta Faces (JSF)</p>
-        </footer>
-    </div>
+
+            <!-- Center: nav links -->
+            <input type="checkbox" id="nav-toggle" class="nav-toggle"/>
+            <label for="nav-toggle" class="nav-toggle-label" title="Toggle navigation">&#9776;</label>
+
+            <nav class="app-nav">
+                <h:link outcome="index" value="Dashboard"
+                        styleClass="nav-link#{navBean.isActive('index') ? ' active' : ''}"/>
+                <h:link outcome="groups" value="Groups"
+                        styleClass="nav-link#{navBean.isActive('groups') ? ' active' : ''}"/>
+                <h:link outcome="matches" value="Matches"
+                        styleClass="nav-link#{navBean.isActive('matches') ? ' active' : ''}"/>
+                <h:link outcome="predictions" value="Predictions"
+                        styleClass="nav-link#{navBean.isActive('predictions') ? ' active' : ''}"/>
+                <h:link outcome="leaderboard" value="Leaderboard"
+                        styleClass="nav-link#{navBean.isActive('leaderboard') ? ' active' : ''}"/>
+                <h:panelGroup rendered="#{authBean.admin}" layout="inline">
+                    <h:link outcome="users" value="Users"
+                            styleClass="nav-link#{navBean.isActive('users') ? ' active' : ''}"/>
+                    <h:link outcome="admin-whitelist" value="Whitelist"
+                            styleClass="nav-link#{navBean.isActive('admin-whitelist') ? ' active' : ''}"/>
+                    <h:link outcome="admin-rounds" value="Rounds"
+                            styleClass="nav-link#{navBean.isActive('admin-rounds') ? ' active' : ''}"/>
+                    <h:link outcome="admin-groups" value="Groups Admin"
+                            styleClass="nav-link#{navBean.isActive('admin-groups') ? ' active' : ''}"/>
+                    <h:link outcome="admin-matches" value="Matches Admin"
+                            styleClass="nav-link#{navBean.isActive('admin-matches') ? ' active' : ''}"/>
+                    <h:link outcome="admin-audit" value="&#128274; Audit"
+                            styleClass="nav-link#{navBean.isActive('admin-audit') ? ' active' : ''}"/>
+                </h:panelGroup>
+            </nav>
+
+            <!-- Right: theme toggle + user chip + logout -->
+            <div class="header-right">
+                <button id="themeToggle" class="theme-toggle-btn" title="Toggle dark mode"
+                        onclick="toggleTheme()">&#127769;</button>
+
+                <h:panelGroup rendered="#{authBean.loggedIn}" layout="inline">
+                    <span class="user-chip">
+                        <span class="user-chip-icon">&#128100;</span>
+                        <span class="user-chip-name">
+                            <h:outputText value="#{authBean.currentUsername}"/>
+                        </span>
+                    </span>
+                    <h:form styleClass="inline-form">
+                        <h:commandLink value="Sign out"
+                                       action="#{authBean.logout}"
+                                       styleClass="nav-link nav-link-logout"/>
+                    </h:form>
+                </h:panelGroup>
+                <h:panelGroup rendered="#{not authBean.loggedIn}" layout="inline">
+                    <h:link outcome="login" value="Login" styleClass="nav-link"/>
+                </h:panelGroup>
+            </div>
+
+        </div>
+    </header>
+
+    <!-- ══════════════════════════════════════
+         MAIN CONTENT
+    ══════════════════════════════════════ -->
+    <main class="app-main">
+        <ui:insert name="content"/>
+    </main>
+
+    <footer class="app-footer">
+        <p>World Cup Predictor &#8212; QNB Group</p>
+    </footer>
+</div>
+
+<!-- ══════════════════════════════════════
+     HIDDEN TAB TOKEN (Task 2 — single-tab enforcement)
+     Placed outside all forms. Read by tab-append JS below.
+══════════════════════════════════════ -->
+<h:panelGroup rendered="#{authBean.loggedIn}" layout="block">
+    <input type="hidden" id="globalTabToken" value="#{authBean.currentTabToken}"/>
+</h:panelGroup>
+
+<!-- ══════════════════════════════════════
+     SCRIPTS
+══════════════════════════════════════ -->
+<script type="text/javascript">
+//<![CDATA[
+
+// ── Theme toggle ──────────────────────────────────────────────────────────
+function toggleTheme() {
+    var html = document.documentElement;
+    var btn  = document.getElementById('themeToggle');
+    var isDark = html.getAttribute('data-theme') === 'dark';
+    if (isDark) {
+        html.removeAttribute('data-theme');
+        if (btn) btn.innerHTML = '&#127769;';
+        setCookie('wcPredictor_theme', 'light', 365);
+    } else {
+        html.setAttribute('data-theme', 'dark');
+        if (btn) btn.innerHTML = '&#9728;&#65039;';
+        setCookie('wcPredictor_theme', 'dark', 365);
+    }
+}
+
+function setCookie(name, value, days) {
+    var expires = '';
+    if (days) {
+        var d = new Date();
+        d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
+        expires = '; expires=' + d.toUTCString();
+    }
+    document.cookie = name + '=' + value + expires + '; path=/';
+}
+
+// Sync toggle icon with current theme on load
+(function() {
+    var btn = document.getElementById('themeToggle');
+    if (!btn) return;
+    if (document.documentElement.getAttribute('data-theme') === 'dark') {
+        btn.innerHTML = '&#9728;&#65039;';
+    }
+})();
+
+// ── Tab token: append tabToken param to every anchor href on DOMContentLoaded ──
+// This is the ONLY tab-enforcement mechanism — no localStorage, no sessionStorage.
+// The server-side TabEnforcementFilter validates the token on every GET request.
+document.addEventListener('DOMContentLoaded', function() {
+    var tokenEl = document.getElementById('globalTabToken');
+    if (!tokenEl) return;
+    var token = tokenEl.value;
+    if (!token || token === '' || token === 'null') return;
+
+    var anchors = document.querySelectorAll('a[href]');
+    for (var i = 0; i < anchors.length; i++) {
+        var a = anchors[i];
+        var href = a.getAttribute('href');
+        if (!href || href.indexOf('#') === 0 || href.indexOf('javascript') === 0
+                || href.indexOf('login.xhtml') >= 0
+                || href.indexOf('session-conflict.xhtml') >= 0) continue;
+        var sep = href.indexOf('?') >= 0 ? '&amp;' : '?';
+        a.setAttribute('href', href + sep + 'tabToken=' + encodeURIComponent(token));
+    }
+});
+//]]>
+</script>
+
 </h:body>
 </html>

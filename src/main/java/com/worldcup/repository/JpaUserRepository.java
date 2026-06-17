@@ -1,128 +1,178 @@
 package com.worldcup.repository;
 
 import com.worldcup.model.User;
+import com.worldcup.security.Role;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
-import jakarta.transaction.Transactional;
+import jakarta.inject.Inject;
 
+import java.sql.*;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
- * JPA/Hibernate implementation of UserRepository using PostgreSQL database.
- *
- * Replaces in-memory storage with persistent database operations.
- * All operations are transactional and thread-safe.
+ * Pure JDBC implementation of UserRepository.
+ * No JPA/Hibernate queries — all operations use PreparedStatement.
  */
 @ApplicationScoped
-@Transactional
 public class JpaUserRepository implements UserRepository {
 
-    @PersistenceContext(unitName = "WorldCupPU")
-    private EntityManager em;
+    private static final Logger LOG = Logger.getLogger(JpaUserRepository.class.getName());
+
+    @Inject
+    private JdbcHelper jdbc;
+
+    // ── save ─────────────────────────────────────────────────────────────
 
     @Override
     public User save(User user) {
-        em.persist(user);
-        em.flush();
-        return user;
+        String sql = "INSERT INTO users (username, password_hash, role, total_points, "
+                + "created_at, last_login, ad_username, employee_id, email, display_name) "
+                + "VALUES (?,?,?,?,?,?,?,?,?,?)";
+        try (Connection c = jdbc.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, user.getUsername());
+            ps.setString(2, user.getPasswordHash());
+            ps.setString(3, user.getRole() != null ? user.getRole().name() : Role.NORMAL_USER.name());
+            ps.setInt(4, user.getTotalPoints());
+            ps.setTimestamp(5, toTs(user.getCreatedAt() != null ? user.getCreatedAt() : LocalDateTime.now()));
+            ps.setTimestamp(6, toTs(user.getLastLogin()));
+            ps.setString(7, user.getAdUsername());
+            ps.setString(8, user.getEmployeeId());
+            ps.setString(9, user.getEmail());
+            ps.setString(10, user.getDisplayName());
+            ps.executeUpdate();
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (keys.next()) user.setId(keys.getLong(1));
+            }
+            return user;
+        } catch (SQLException e) {
+            LOG.log(Level.SEVERE, "save(User) failed", e);
+            throw new RuntimeException("Failed to save user: " + e.getMessage(), e);
+        }
     }
+
+    // ── findById ──────────────────────────────────────────────────────────
 
     @Override
     public Optional<User> findById(Long id) {
-        return Optional.ofNullable(em.find(User.class, id));
+        String sql = "SELECT * FROM users WHERE id = ?";
+        try (Connection c = jdbc.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return Optional.of(map(rs));
+            }
+        } catch (SQLException e) {
+            LOG.log(Level.SEVERE, "findById failed id=" + id, e);
+        }
+        return Optional.empty();
     }
+
+    // ── findByUsername ────────────────────────────────────────────────────
 
     @Override
     public Optional<User> findByUsername(String username) {
-
-        System.out.println("QUERY USERNAME = [" + username + "]");
-
-
-
-        return em.createQuery(
-                        "SELECT u FROM User u WHERE u.username = :username",
-                        User.class)
-                .setParameter("username", username)
-                .getResultStream()
-                .findFirst();
+        String sql = "SELECT * FROM users WHERE username = ?";
+        try (Connection c = jdbc.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, username);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return Optional.of(map(rs));
+            }
+        } catch (SQLException e) {
+            LOG.log(Level.SEVERE, "findByUsername failed username=" + username, e);
+        }
+        return Optional.empty();
     }
+
+    // ── findByAdUsername ──────────────────────────────────────────────────
 
     @Override
     public Optional<User> findByAdUsername(String adUsername) {
-        return em.createQuery("SELECT u FROM User u WHERE u.adUsername = :adUsername", User.class)
-                .setParameter("adUsername", adUsername)
-                .getResultStream()
-                .findFirst();
+        String sql = "SELECT * FROM users WHERE ad_username = ?";
+        try (Connection c = jdbc.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, adUsername);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return Optional.of(map(rs));
+            }
+        } catch (SQLException e) {
+            LOG.log(Level.SEVERE, "findByAdUsername failed", e);
+        }
+        return Optional.empty();
     }
+
+    // ── findAll ───────────────────────────────────────────────────────────
 
     @Override
     public List<User> findAll() {
-        return em.createQuery("SELECT u FROM User u ORDER BY u.createdAt DESC", User.class)
-                .getResultList();
+        String sql = "SELECT * FROM users ORDER BY created_at DESC";
+        List<User> list = new ArrayList<User>();
+        try (Connection c = jdbc.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) list.add(map(rs));
+        } catch (SQLException e) {
+            LOG.log(Level.SEVERE, "findAll(User) failed", e);
+        }
+        return list;
     }
+
+    // ── update ────────────────────────────────────────────────────────────
 
     @Override
     public User update(User user) {
-        return em.merge(user);
-    }
-
-    /**
-     * Find all approved users
-     */
-    /* DEPRECATED - Replaced by Whitelist
-    public List<User> findAllApproved() {
-        return em.createQuery("SELECT u FROM User u WHERE u.isApproved = true ORDER BY u.username", User.class)
-                .getResultList();
-    }
-    */
-
-    /**
-     * Find all admin users
-     */
-    public List<User> findAllAdmins() {
-        return em.createQuery("SELECT u FROM User u WHERE u.role = 'ADMIN' ORDER BY u.username", User.class)
-                .getResultList();
-    }
-
-    /**
-     * Find all pending approval users
-     */
-    /* DEPRECATED - Replaced by Whitelist
-    public List<User> findPendingApproval() {
-        return em.createQuery("SELECT u FROM User u WHERE u.isApproved = false ORDER BY u.createdAt", User.class)
-                .getResultList();
-    }
-    */
-
-    /**
-     * Delete a user by ID
-     */
-    @Transactional
-    public boolean deleteById(Long id) {
-        User user = em.find(User.class, id);
-        if (user == null) {
-            return false;
+        String sql = "UPDATE users SET username=?, password_hash=?, role=?, total_points=?, "
+                + "last_login=?, ad_username=?, employee_id=?, email=?, display_name=? "
+                + "WHERE id=?";
+        try (Connection c = jdbc.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, user.getUsername());
+            ps.setString(2, user.getPasswordHash());
+            ps.setString(3, user.getRole() != null ? user.getRole().name() : Role.NORMAL_USER.name());
+            ps.setInt(4, user.getTotalPoints());
+            ps.setTimestamp(5, toTs(user.getLastLogin()));
+            ps.setString(6, user.getAdUsername());
+            ps.setString(7, user.getEmployeeId());
+            ps.setString(8, user.getEmail());
+            ps.setString(9, user.getDisplayName());
+            ps.setLong(10, user.getId());
+            ps.executeUpdate();
+            return user;
+        } catch (SQLException e) {
+            LOG.log(Level.SEVERE, "update(User) failed id=" + user.getId(), e);
+            throw new RuntimeException("Failed to update user: " + e.getMessage(), e);
         }
-        em.remove(user);
-        return true;
     }
 
-    /**
-     * Count total users
-     */
-    public long count() {
-        return em.createQuery("SELECT COUNT(u) FROM User u", Long.class)
-                .getSingleResult();
+    // ── mapping ───────────────────────────────────────────────────────────
+
+    private User map(ResultSet rs) throws SQLException {
+        User u = new User();
+        u.setId(rs.getLong("id"));
+        u.setUsername(rs.getString("username"));
+        u.setPasswordHash(rs.getString("password_hash"));
+        String roleStr = rs.getString("role");
+        u.setRole(roleStr != null ? Role.valueOf(roleStr) : Role.NORMAL_USER);
+        u.setTotalPoints(rs.getInt("total_points"));
+        u.setCreatedAt(fromTs(rs.getTimestamp("created_at")));
+        u.setLastLogin(fromTs(rs.getTimestamp("last_login")));
+        u.setAdUsername(rs.getString("ad_username"));
+        u.setEmployeeId(rs.getString("employee_id"));
+        u.setEmail(rs.getString("email"));
+        u.setDisplayName(rs.getString("display_name"));
+        return u;
     }
 
-    /**
-     * Check if username exists
-     */
-    public boolean existsByUsername(String username) {
-        return em.createQuery("SELECT COUNT(u) FROM User u WHERE u.username = :username", Long.class)
-                .setParameter("username", username)
-                .getSingleResult() > 0;
+    private Timestamp toTs(LocalDateTime ldt) {
+        return ldt == null ? null : Timestamp.valueOf(ldt);
+    }
+
+    private LocalDateTime fromTs(Timestamp ts) {
+        return ts == null ? null : ts.toLocalDateTime();
     }
 }

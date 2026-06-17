@@ -9,6 +9,9 @@ import jakarta.enterprise.context.Initialized;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -189,14 +192,17 @@ public class DataInitializer {
         throw new IllegalStateException("Could not generate unique shortcode for: " + teamName);
     }
 
-    private static final Map<String, String> KNOWN_SHORT_CODES = Map.ofEntries(
-            Map.entry("South Korea", "KOR"),
-            Map.entry("South Africa", "RSA"),
-            Map.entry("Ivory Coast", "CIV"),
-            Map.entry("Costa Rica", "CRC"),
-            Map.entry("Saudi Arabia", "KSA"),
-            Map.entry("New Zealand", "NZL"),
-            Map.entry("El Salvador", "SLV"),
-            Map.entry("Burkina Faso", "BFA")
-    );
+    private static final Map<String, String> KNOWN_SHORT_CODES;
+
+    static {
+        KNOWN_SHORT_CODES = new HashMap<String, String>();
+        KNOWN_SHORT_CODES.put("South Korea",  "KOR");
+        KNOWN_SHORT_CODES.put("South Africa", "RSA");
+        KNOWN_SHORT_CODES.put("Ivory Coast",  "CIV");
+        KNOWN_SHORT_CODES.put("Costa Rica",   "CRC");
+        KNOWN_SHORT_CODES.put("Saudi Arabia", "KSA");
+        KNOWN_SHORT_CODES.put("New Zealand",  "NZL");
+        KNOWN_SHORT_CODES.put("El Salvador",  "SLV");
+        KNOWN_SHORT_CODES.put("Burkina Faso", "BFA");
+    }
 }

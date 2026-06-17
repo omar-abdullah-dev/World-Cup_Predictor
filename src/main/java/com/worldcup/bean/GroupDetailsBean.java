@@ -53,11 +53,7 @@ public class GroupDetailsBean implements Serializable {
     }
 
     public void setGroup(String group) {
-        // Preserve original casing — DB stores "Group A", "Group B" etc.
-        // Just trim whitespace; comparison in loadMatchRows uses equalsIgnoreCase.
-        String normalized = group == null || group.isBlank()
-                ? null
-                : group.trim();
+        String normalized = (group == null || group.trim().isEmpty()) ? null : group.trim();
         if (java.util.Objects.equals(this.group, normalized)) {
             return;
         }
@@ -133,10 +129,9 @@ public class GroupDetailsBean implements Serializable {
     }
 
     public String getGroupTitle() {
-        if (groupMissing || group == null || group.isBlank()) {
+        if (groupMissing || group == null || group.trim().isEmpty()) {
             return "Group";
         }
-        // If the stored name already starts with "Group" (e.g. "Group A"), return it as-is.
         if (group.toLowerCase(Locale.ROOT).startsWith("group")) {
             return group;
         }
@@ -176,7 +171,7 @@ public class GroupDetailsBean implements Serializable {
     }
 
     private void resolveGroupFromRequest() {
-        if (group != null && !group.isBlank()) {
+        if (group != null && !group.trim().isEmpty()) {
             groupMissing = false;
             return;
         }
@@ -186,8 +181,7 @@ public class GroupDetailsBean implements Serializable {
             return;
         }
         String groupParam = context.getExternalContext().getRequestParameterMap().get("group");
-        if (groupParam != null && !groupParam.isBlank()) {
-            // Preserve original casing — DB names are "Group A", "Group B" etc.
+        if (groupParam != null && !groupParam.trim().isEmpty()) {
             this.group = groupParam.trim();
             groupMissing = false;
         } else {
@@ -206,8 +200,8 @@ public class GroupDetailsBean implements Serializable {
     }
 
     private void loadMatchRows() {
-        matchRows = new ArrayList<>();
-        if (group == null || group.isBlank()) {
+        matchRows = new ArrayList<MatchRow>();
+        if (group == null || group.trim().isEmpty()) {
             return;
         }
 

@@ -20,6 +20,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
+/**
+ * Admin backing bean for match management.
+ *
+ * Handles:
+ *  - Scheduling new matches (home/away team names + kickoff datetime)
+ *  - Recording results for regular and knockout matches
+ *    (90 min scores + optional extra time + optional penalties + decidedBy)
+ *  - Deleting unstarted matches
+ *
+ * Java 8 compatible — no String.isBlank(), no var, no switch expressions.
+ */
 @Named
 @ViewScoped
 public class AdminMatchBean implements Serializable {
@@ -27,11 +38,11 @@ public class AdminMatchBean implements Serializable {
     private static final long serialVersionUID = 1L;
     private static final Logger LOG = Logger.getLogger(AdminMatchBean.class.getName());
 
-    @Inject private MatchService matchService;
-    @Inject private AuthBean authBean;
+    @Inject private MatchService      matchService;
+    @Inject private AuthBean          authBean;
     @Inject private ActivityLogService activityLogService;
 
-    private List<MatchAdminRow> matchRows = new ArrayList<>();
+    private List<MatchAdminRow> matchRows = new ArrayList<MatchAdminRow>();
     private String homeTeam;
     private String awayTeam;
     private String kickoffDate;
@@ -46,10 +57,10 @@ public class AdminMatchBean implements Serializable {
 
     public void loadMatches() {
         if (authBean.getUser() == null) {
-            matchRows = new ArrayList<>();
+            matchRows = new ArrayList<MatchAdminRow>();
             return;
         }
-        matchRows = new ArrayList<>();
+        matchRows = new ArrayList<MatchAdminRow>();
         for (Match m : matchService.getAllMatches()) {
             matchRows.add(new MatchAdminRow(m));
         }
@@ -73,16 +84,18 @@ public class AdminMatchBean implements Serializable {
     }
 
     /**
-     * Reads homeScore and awayScore directly from the raw HTTP request parameter map,
-     * keyed as "hs_<matchId>" and "as_<matchId>".
+     * Reads score parameters directly from the raw HTTP request parameter map.
      *
-     * Why: JSF EL cannot write back into a Map<Long,Integer> inside ui:repeat —
-     * during Apply Request Values the key arrives as a String and the put never fires.
-     * Reading raw params bypasses the JSF binding phase entirely and is always reliable.
+     * Standard params:  hs_<id>  /  as_<id>
+     * Knockout params:  et_hs_<id> / et_as_<id>  (extra time)
+     *                   pen_hs_<id> / pen_as_<id> (penalties)
+     *                   decided_by_<id>            ("90" | "ET" | "PEN")
+     *
+     * Why raw params: JSF EL cannot write back into Map<Long,Integer> inside
+     * ui:repeat — the key arrives as String and the put never fires.
      */
     public void forceSubmitResult(Long matchId) {
         if (matchId == null) {
-            LOG.warning("[forceSubmitResult] Rejected: matchId is null.");
             addMessage(FacesMessage.SEVERITY_ERROR, "Invalid match selection.");
             return;
         }
@@ -94,50 +107,76 @@ public class AdminMatchBean implements Serializable {
         String asRaw = params.get("as_" + matchId);
 
         LOG.info("[forceSubmitResult] matchId=" + matchId
-                + " | raw params hs_" + matchId + "='" + hsRaw
-                + "' as_" + matchId + "='" + asRaw + "'");
+                + " hs=" + hsRaw + " as=" + asRaw);
 
-        if (hsRaw == null || hsRaw.isBlank() || asRaw == null || asRaw.isBlank()) {
-            LOG.warning("[forceSubmitResult] Rejected for matchId=" + matchId
-                    + " — one or both score params missing/blank."
-                    + " hs_" + matchId + "='" + hsRaw + "'"
-                    + " as_" + matchId + "='" + asRaw + "'");
+        if (isNullOrEmpty(hsRaw) || isNullOrEmpty(asRaw)) {
             addMessage(FacesMessage.SEVERITY_ERROR, "Please enter both scores.");
             return;
         }
 
-        Integer hs, as;
+        int hs, as;
         try {
             hs = Integer.parseInt(hsRaw.trim());
             as = Integer.parseInt(asRaw.trim());
         } catch (NumberFormatException e) {
-            LOG.warning("[forceSubmitResult] Rejected for matchId=" + matchId
-                    + " — non-numeric score: hs='" + hsRaw + "' as='" + asRaw + "'");
             addMessage(FacesMessage.SEVERITY_ERROR, "Scores must be whole numbers.");
             return;
         }
 
         if (hs < 0 || as < 0) {
-            LOG.warning("[forceSubmitResult] Rejected for matchId=" + matchId
-                    + " — negative score: hs=" + hs + " as=" + as);
             addMessage(FacesMessage.SEVERITY_ERROR, "Scores cannot be negative.");
             return;
         }
 
+        // ── Knockout extra fields ─────────────────────────────────────────
+        String etHsRaw     = params.get("et_hs_"     + matchId);
+        String etAsRaw     = params.get("et_as_"     + matchId);
+        String penHsRaw    = params.get("pen_hs_"    + matchId);
+        String penAsRaw    = params.get("pen_as_"    + matchId);
+        String decidedByRaw = params.get("decided_by_" + matchId);
+
+        boolean hasKnockoutData = !isNullOrEmpty(decidedByRaw)
+                && !"90".equals(decidedByRaw.trim());
+
         try {
-            matchService.forceUpdateResult(authBean.getUser(), matchId, hs, as);
-            LOG.info("[forceSubmitResult] Result saved: matchId=" + matchId
-                    + " score=" + hs + "-" + as);
             String username = authBean.getUser().getUsername();
-            activityLogService.log("RES-SAV",
-                    "RES-SAV | screen=admin-matches.xhtml | user=" + username
-                    + " | detail=matchId=" + matchId + " score=" + hs + "-" + as,
-                    username);
+
+            if (hasKnockoutData) {
+                Integer etHs  = parseOptionalInt(etHsRaw);
+                Integer etAs  = parseOptionalInt(etAsRaw);
+                Integer penHs = parseOptionalInt(penHsRaw);
+                Integer penAs = parseOptionalInt(penAsRaw);
+                String  decidedBy = decidedByRaw.trim();
+
+                matchService.forceUpdateResult(
+                        authBean.getUser(), matchId,
+                        hs, as, etHs, etAs, penHs, penAs, decidedBy);
+
+                LOG.info("[forceSubmitResult] Knockout result: matchId=" + matchId
+                        + " score=" + hs + "-" + as
+                        + " decidedBy=" + decidedBy);
+                activityLogService.log("RES-SAV",
+                        "RES-SAV | user=" + username
+                        + " | matchId=" + matchId
+                        + " | score=" + hs + "-" + as
+                        + " | decidedBy=" + decidedBy,
+                        username);
+            } else {
+                matchService.forceUpdateResult(authBean.getUser(), matchId, hs, as);
+                LOG.info("[forceSubmitResult] Result: matchId=" + matchId
+                        + " score=" + hs + "-" + as);
+                activityLogService.log("RES-SAV",
+                        "RES-SAV | user=" + username
+                        + " | matchId=" + matchId
+                        + " | score=" + hs + "-" + as,
+                        username);
+            }
+
             addMessage(FacesMessage.SEVERITY_INFO, "Result recorded successfully");
             loadMatches();
+
         } catch (Exception e) {
-            LOG.warning("[forceSubmitResult] Service error for matchId=" + matchId
-                    + ": " + e.getMessage());
+            LOG.warning("[forceSubmitResult] Error for matchId=" + matchId + ": " + e.getMessage());
             addMessage(FacesMessage.SEVERITY_ERROR, e.getMessage());
         }
     }
@@ -147,8 +186,7 @@ public class AdminMatchBean implements Serializable {
             matchService.deleteMatch(authBean.getUser(), matchId);
             String username = authBean.getUser().getUsername();
             activityLogService.log("MATCH-DEL",
-                    "MATCH-DEL | screen=admin-matches.xhtml | user=" + username
-                    + " | detail=matchId=" + matchId,
+                    "MATCH-DEL | user=" + username + " | matchId=" + matchId,
                     username);
             addMessage(FacesMessage.SEVERITY_INFO, "Match deleted");
             loadMatches();
@@ -157,8 +195,22 @@ public class AdminMatchBean implements Serializable {
         }
     }
 
+    // ── Helpers ───────────────────────────────────────────────────────────
+
     private void addMessage(FacesMessage.Severity severity, String summary) {
-        FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(severity, summary, null));
+        FacesContext.getCurrentInstance().addMessage(null,
+                new FacesMessage(severity, summary, null));
+    }
+
+    /** Java 8 replacement for String.isBlank() */
+    private boolean isNullOrEmpty(String s) {
+        return s == null || s.trim().isEmpty();
+    }
+
+    private Integer parseOptionalInt(String raw) {
+        if (isNullOrEmpty(raw)) return null;
+        try { return Integer.parseInt(raw.trim()); }
+        catch (NumberFormatException e) { return null; }
     }
 
     public String getTeamInitials(String teamName) {
@@ -170,24 +222,25 @@ public class AdminMatchBean implements Serializable {
         return teamName.substring(0, Math.min(teamName.length(), 3)).toUpperCase();
     }
 
-    public List<MatchAdminRow> getMatchRows() { return matchRows; }
-    public String getHomeTeam() { return homeTeam; }
-    public void setHomeTeam(String homeTeam) { this.homeTeam = homeTeam; }
-    public String getAwayTeam() { return awayTeam; }
-    public void setAwayTeam(String awayTeam) { this.awayTeam = awayTeam; }
-    public String getKickoffDate() { return kickoffDate; }
-    public void setKickoffDate(String kickoffDate) { this.kickoffDate = kickoffDate; }
+    // ── Getters / Setters ─────────────────────────────────────────────────
 
-    // -----------------------------------------------------------------------
-    // Inner row — read-only wrapper; no mutable score fields here
-    // -----------------------------------------------------------------------
+    public List<MatchAdminRow> getMatchRows()       { return matchRows; }
+    public String getHomeTeam()                     { return homeTeam; }
+    public void   setHomeTeam(String homeTeam)      { this.homeTeam = homeTeam; }
+    public String getAwayTeam()                     { return awayTeam; }
+    public void   setAwayTeam(String awayTeam)      { this.awayTeam = awayTeam; }
+    public String getKickoffDate()                  { return kickoffDate; }
+    public void   setKickoffDate(String kickoffDate){ this.kickoffDate = kickoffDate; }
+
+    // ── Inner row ─────────────────────────────────────────────────────────
+
     public static class MatchAdminRow implements Serializable {
         private static final long serialVersionUID = 1L;
         private final Match match;
 
         MatchAdminRow(Match match) { this.match = match; }
 
-        public Long getMatchId() { return match.getId(); }
-        public Match getMatch()  { return match; }
+        public Long  getMatchId() { return match.getId(); }
+        public Match getMatch()   { return match; }
     }
 }

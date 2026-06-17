@@ -5,6 +5,7 @@ import com.worldcup.model.Prediction;
 import com.worldcup.model.User;
 import com.worldcup.repository.PredictionRepository;
 import com.worldcup.repository.UserRepository;
+import com.worldcup.service.ActivityLogService;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
@@ -27,6 +28,7 @@ public class PredictionService {
     private UserRepository userRepository;
     private MatchService matchService;
     private ScoringService scoringService;
+    private ActivityLogService activityLogService;
 
     /** Required by CDI / Weld for proxy creation. */
     protected PredictionService() {}
@@ -35,19 +37,31 @@ public class PredictionService {
     public PredictionService(PredictionRepository predictionRepository,
                              UserRepository userRepository,
                              MatchService matchService,
-                             ScoringService scoringService) {
+                             ScoringService scoringService,
+                             ActivityLogService activityLogService) {
         this.predictionRepository = predictionRepository;
-        this.userRepository = userRepository;
-        this.matchService = matchService;
-        this.scoringService = scoringService;
+        this.userRepository       = userRepository;
+        this.matchService         = matchService;
+        this.scoringService       = scoringService;
+        this.activityLogService   = activityLogService;
     }
 
     /**
      * Submits and persists a new prediction after validating all business rules.
+     * Emits a PREDICTION_CREATED or PREDICTION_UPDATED audit record.
+     *
+     * @param userId              the user making the prediction
+     * @param matchId             the match being predicted
+     * @param predictedHomeScore  home score prediction
+     * @param predictedAwayScore  away score prediction
+     * @param sessionId           HTTP session ID (for audit log, may be null)
+     * @param ipAddress           client IP (for audit log, may be null)
+     * @param userAgent           browser UA (for audit log, may be null)
      */
     public Prediction submitPrediction(Long userId, Long matchId,
-                                       int predictedHomeScore, int predictedAwayScore) {
-        userRepository.findById(userId)
+                                       int predictedHomeScore, int predictedAwayScore,
+                                       String sessionId, String ipAddress, String userAgent) {
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
 
         Match match = matchService.getMatch(matchId);
@@ -62,7 +76,6 @@ public class PredictionService {
                 && java.time.LocalDateTime.now().isAfter(match.getPredictionDeadline()))
             throw new IllegalArgumentException("Prediction deadline has passed for this match.");
 
-        // Lock predictions PREDICTION_LOCK_MINUTES before kickoff (or if already started)
         if (match.isPredictionLocked())
             throw new IllegalArgumentException(
                 "Predictions are locked — less than "
@@ -73,15 +86,48 @@ public class PredictionService {
             throw new IllegalArgumentException("Predicted scores cannot be negative.");
 
         java.util.Optional<Prediction> existing = predictionRepository.findByUserAndMatch(userId, matchId);
+        String newValue = predictedHomeScore + "-" + predictedAwayScore;
+
         if (existing.isPresent()) {
             Prediction prediction = existing.get();
+            String oldValue = prediction.getPredictedHomeScore() + "-" + prediction.getPredictedAwayScore();
             prediction.setPredictedHomeScore(predictedHomeScore);
             prediction.setPredictedAwayScore(predictedAwayScore);
-            return predictionRepository.save(prediction);
+            Prediction saved = predictionRepository.save(prediction);
+            // Audit: PREDICTION_UPDATED
+            activityLogService.log("PREDICTION_UPDATED",
+                    "PREDICTION_UPDATED | user=" + user.getUsername()
+                    + " | matchId=" + matchId
+                    + " | " + match.getHomeTeam() + " vs " + match.getAwayTeam()
+                    + " | old=" + oldValue + " new=" + newValue,
+                    user.getUsername(),
+                    userId, sessionId, ipAddress, userAgent,
+                    matchId, oldValue, newValue);
+            return saved;
         }
 
-        return predictionRepository.save(
+        Prediction saved = predictionRepository.save(
             new Prediction(null, userId, matchId, predictedHomeScore, predictedAwayScore));
+        // Audit: PREDICTION_CREATED
+        activityLogService.log("PREDICTION_CREATED",
+                "PREDICTION_CREATED | user=" + user.getUsername()
+                + " | matchId=" + matchId
+                + " | " + match.getHomeTeam() + " vs " + match.getAwayTeam()
+                + " | score=" + newValue,
+                user.getUsername(),
+                userId, sessionId, ipAddress, userAgent,
+                matchId, null, newValue);
+        return saved;
+    }
+
+    /**
+     * Backward-compatible overload — callers that don't have session context.
+     * Delegates to the full method with nulls for session fields.
+     */
+    public Prediction submitPrediction(Long userId, Long matchId,
+                                       int predictedHomeScore, int predictedAwayScore) {
+        return submitPrediction(userId, matchId, predictedHomeScore, predictedAwayScore,
+                null, null, null);
     }
 
     public boolean hasPredictionForMatch(Long userId, Long matchId) {
@@ -99,7 +145,7 @@ public class PredictionService {
     public List<Prediction> getPredictionsByUser(Long userId) {
         return predictionRepository.findAll().stream()
                 .filter(p -> p.getUserId().equals(userId))
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     public List<Prediction> getPredictionsByMatch(Long matchId) {

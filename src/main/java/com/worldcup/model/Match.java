@@ -12,21 +12,24 @@ import com.worldcup.config.GameConstants;
  * Tracks:
  * - Teams involved (home and away)
  * - Match timing (kickoff date)
- * - Scores and match status
+ * - Scores, extra time, penalties and match status
  * - Result recording window (4 hours after kickoff)
+ *
+ * Java 8 / WebLogic compatible — no Java 9+ language features.
  */
 @Entity
 @Table(name = "matches")
 public class Match implements Serializable {
+
     private static final long serialVersionUID = 1L;
 
     public static final int RESULT_WINDOW_HOURS = 4;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // We'll keep these String fields for fallback or denormalized view,
-    // but the primary association will be the Team entities.
+    // Denormalized string fields for quick display without joins
     @Column(name = "home_team", nullable = false, length = 100)
     private String homeTeam;
 
@@ -78,30 +81,34 @@ public class Match implements Serializable {
     @Column(nullable = false)
     private MatchStatus status;
 
-    // ── WorldCupAPI integration fields ──────────────────────────────────────
-    /** External fixture ID from WorldCupAPI — used as the sync key. */
-    @Column(name = "external_match_id", unique = true)
-    private Long externalMatchId;
+    // ── Knockout round fields (Hibernate auto-creates via hbm2ddl=update) ──
 
-    /** Venue / stadium name from the API. */
-    @Column(name = "venue", length = 200)
-    private String venue;
+    /** Extra time home score (knockout rounds only). */
+    @Column(name = "extra_time_home_score")
+    private Integer extraTimeHomeScore;
 
-    /** Home team's numeric ID in WorldCupAPI. */
-    @Column(name = "home_team_api_id")
-    private Integer homeTeamApiId;
+    /** Extra time away score (knockout rounds only). */
+    @Column(name = "extra_time_away_score")
+    private Integer extraTimeAwayScore;
 
-    /** Away team's numeric ID in WorldCupAPI. */
-    @Column(name = "away_team_api_id")
-    private Integer awayTeamApiId;
+    /** Penalty shootout home score (knockout rounds only). */
+    @Column(name = "penalty_home_score")
+    private Integer penaltyHomeScore;
 
-    /** URL to the home team's logo served by WorldCupAPI CDN. */
-    @Column(name = "home_team_logo", length = 500)
-    private String homeTeamLogo;
+    /** Penalty shootout away score (knockout rounds only). */
+    @Column(name = "penalty_away_score")
+    private Integer penaltyAwayScore;
 
-    /** URL to the away team's logo served by WorldCupAPI CDN. */
-    @Column(name = "away_team_logo", length = 500)
-    private String awayTeamLogo;
+    /**
+     * How the match was decided.
+     * Values: "90" = decided in 90 min (or null for group stage)
+     *         "ET" = decided in extra time
+     *         "PEN" = decided on penalties
+     */
+    @Column(name = "match_decided_by", length = 10)
+    private String matchDecidedBy;
+
+    // ── Constructors ──────────────────────────────────────────────────────
 
     public Match() {
         this.status = MatchStatus.SCHEDULED;
@@ -121,6 +128,8 @@ public class Match implements Serializable {
         this.kickoffDate = kickoffDate;
         this.status = MatchStatus.SCHEDULED;
     }
+
+    // ── Business logic ────────────────────────────────────────────────────
 
     public boolean hasStarted() {
         return kickoffDate != null && !LocalDateTime.now().isBefore(kickoffDate);
@@ -149,25 +158,6 @@ public class Match implements Serializable {
         return true;
     }
 
-    /* DEPRECATED - New lock logic uses resultEnteredAt instead of kickoffDate
-    public boolean isWithinResultWindow() {
-        if (kickoffDate == null || isFinished()) {
-            return false;
-        }
-        LocalDateTime now = LocalDateTime.now();
-        return !now.isBefore(kickoffDate)
-                && !now.isAfter(kickoffDate.plusHours(RESULT_WINDOW_HOURS));
-    }
-
-    public boolean canRecordResult() {
-        return status == MatchStatus.SCHEDULED && isWithinResultWindow();
-    }
-
-    public LocalDateTime getResultDeadline() {
-        return kickoffDate == null ? null : kickoffDate.plusHours(RESULT_WINDOW_HOURS);
-    }
-    */
-
     public boolean isResultLocked() {
         if (resultLockedAt != null) return true;
         if (resultEnteredAt != null) {
@@ -186,6 +176,14 @@ public class Match implements Serializable {
         return false;
     }
 
+    /**
+     * Returns true if this match belongs to a knockout stage
+     * (any stage other than GROUP_STAGE).
+     */
+    public boolean isKnockoutMatch() {
+        return stage != null && stage != TournamentStage.GROUP_STAGE;
+    }
+
     public void finish(int homeScore, int awayScore) {
         this.homeScore = homeScore;
         this.awayScore = awayScore;
@@ -200,25 +198,25 @@ public class Match implements Serializable {
         return Integer.compare(homeScore, awayScore);
     }
 
+    // ── Accessors ─────────────────────────────────────────────────────────
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
     public String getHomeTeam() {
-        if (homeTeam != null && !homeTeam.isBlank()) {
+        if (homeTeam != null && !homeTeam.isEmpty()) {
             return homeTeam;
         }
         return homeTeamEntity != null ? homeTeamEntity.getName() : "";
     }
-
     public void setHomeTeam(String homeTeam) { this.homeTeam = homeTeam; }
 
     public String getAwayTeam() {
-        if (awayTeam != null && !awayTeam.isBlank()) {
+        if (awayTeam != null && !awayTeam.isEmpty()) {
             return awayTeam;
         }
         return awayTeamEntity != null ? awayTeamEntity.getName() : "";
     }
-
     public void setAwayTeam(String awayTeam) { this.awayTeam = awayTeam; }
 
     public LocalDateTime getKickoffDate() { return kickoffDate; }
@@ -234,14 +232,14 @@ public class Match implements Serializable {
     public void setStatus(MatchStatus status) { this.status = status; }
 
     public Team getHomeTeamEntity() { return homeTeamEntity; }
-    public void setHomeTeamEntity(Team homeTeamEntity) { 
-        this.homeTeamEntity = homeTeamEntity; 
+    public void setHomeTeamEntity(Team homeTeamEntity) {
+        this.homeTeamEntity = homeTeamEntity;
         if (homeTeamEntity != null) this.homeTeam = homeTeamEntity.getName();
     }
 
     public Team getAwayTeamEntity() { return awayTeamEntity; }
-    public void setAwayTeamEntity(Team awayTeamEntity) { 
-        this.awayTeamEntity = awayTeamEntity; 
+    public void setAwayTeamEntity(Team awayTeamEntity) {
+        this.awayTeamEntity = awayTeamEntity;
         if (awayTeamEntity != null) this.awayTeam = awayTeamEntity.getName();
     }
 
@@ -266,24 +264,22 @@ public class Match implements Serializable {
     public LocalDateTime getResultLockedAt() { return resultLockedAt; }
     public void setResultLockedAt(LocalDateTime resultLockedAt) { this.resultLockedAt = resultLockedAt; }
 
-    // ── WorldCupAPI field accessors ──────────────────────────────────────────
-    public Long getExternalMatchId() { return externalMatchId; }
-    public void setExternalMatchId(Long externalMatchId) { this.externalMatchId = externalMatchId; }
+    public Integer getExtraTimeHomeScore() { return extraTimeHomeScore; }
+    public void setExtraTimeHomeScore(Integer extraTimeHomeScore) { this.extraTimeHomeScore = extraTimeHomeScore; }
 
-    public String getVenue() { return venue; }
-    public void setVenue(String venue) { this.venue = venue; }
+    public Integer getExtraTimeAwayScore() { return extraTimeAwayScore; }
+    public void setExtraTimeAwayScore(Integer extraTimeAwayScore) { this.extraTimeAwayScore = extraTimeAwayScore; }
 
-    public Integer getHomeTeamApiId() { return homeTeamApiId; }
-    public void setHomeTeamApiId(Integer homeTeamApiId) { this.homeTeamApiId = homeTeamApiId; }
+    public Integer getPenaltyHomeScore() { return penaltyHomeScore; }
+    public void setPenaltyHomeScore(Integer penaltyHomeScore) { this.penaltyHomeScore = penaltyHomeScore; }
 
-    public Integer getAwayTeamApiId() { return awayTeamApiId; }
-    public void setAwayTeamApiId(Integer awayTeamApiId) { this.awayTeamApiId = awayTeamApiId; }
+    public Integer getPenaltyAwayScore() { return penaltyAwayScore; }
+    public void setPenaltyAwayScore(Integer penaltyAwayScore) { this.penaltyAwayScore = penaltyAwayScore; }
 
-    public String getHomeTeamLogo() { return homeTeamLogo; }
-    public void setHomeTeamLogo(String homeTeamLogo) { this.homeTeamLogo = homeTeamLogo; }
+    public String getMatchDecidedBy() { return matchDecidedBy; }
+    public void setMatchDecidedBy(String matchDecidedBy) { this.matchDecidedBy = matchDecidedBy; }
 
-    public String getAwayTeamLogo() { return awayTeamLogo; }
-    public void setAwayTeamLogo(String awayTeamLogo) { this.awayTeamLogo = awayTeamLogo; }
+    // ── Object contract ───────────────────────────────────────────────────
 
     @Override
     public boolean equals(Object o) {
@@ -299,8 +295,9 @@ public class Match implements Serializable {
 
     @Override
     public String toString() {
-        return "Match{" + "id=" + id + ", homeTeam='" + homeTeam + '\'' +
-               ", awayTeam='" + awayTeam + '\'' + ", kickoffDate=" + kickoffDate +
-               ", status=" + status + '}';
+        return "Match{id=" + id + ", homeTeam='" + homeTeam + '\''
+                + ", awayTeam='" + awayTeam + '\''
+                + ", kickoffDate=" + kickoffDate
+                + ", status=" + status + '}';
     }
 }
