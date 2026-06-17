@@ -1,154 +1,161 @@
 package com.worldcup.service;
 
 import com.worldcup.model.SystemActivityLog;
+import com.worldcup.repository.JdbcHelper;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
-import jakarta.transaction.Transactional;
+import jakarta.inject.Inject;
 
+import java.sql.*;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  * Persists system activity entries to the system_activity_log table.
+ * Pure JDBC — no JPA/EntityManager.
  *
- * Each entry captures:
- *   opmaj      - the operation type  (e.g. LOGIN, LOGOUT, RESULT_SAVED, MATCH_DELETED)
- *   datemaj    - timestamp (set automatically in SystemActivityLog constructor)
- *   transmaj   - free-text detail about what happened
- *   profilemaj - username of the actor
- *
- * Call log() from any bean/service after a meaningful user action.
- * The method never throws — a DB failure is swallowed so it never
- * breaks the main business flow.
+ * Append-only — records are never updated or deleted.
+ * Every call to log() is never throws so it never breaks the caller.
  */
 @ApplicationScoped
 public class ActivityLogService {
 
     private static final Logger LOG = Logger.getLogger(ActivityLogService.class.getName());
 
-    @PersistenceContext(unitName = "WorldCupPU")
-    private EntityManager em;
+    @Inject
+    private JdbcHelper jdbc;
 
-    /**
-     * Persists one activity log entry (original simple signature — backward compatible).
-     *
-     * @param opmaj      operation name   (e.g. "LOGIN")
-     * @param transmaj   detail text      (e.g. "User logged in from 192.168.1.1")
-     * @param profilemaj actor's username (e.g. "admin")
-     */
-    @Transactional
+    // ── Write ─────────────────────────────────────────────────────────────
+
+    /** Simple 3-arg overload — backward compatible with existing callers. */
     public void log(String opmaj, String transmaj, String profilemaj) {
-        try {
-            SystemActivityLog entry = new SystemActivityLog(opmaj, transmaj, profilemaj);
-            em.persist(entry);
-            em.flush();
-        } catch (Exception e) {
-            // Never let logging break the caller
-            LOG.log(Level.WARNING,
-                    "[ActivityLogService] Failed to persist log entry"
-                    + " opmaj=" + opmaj + " profile=" + profilemaj
-                    + ": " + e.getMessage(), e);
-        }
+        log(opmaj, transmaj, profilemaj, null, null, null, null, null, null, null);
     }
 
-    /**
-     * Persists a fully-enriched audit entry with session context.
-     *
-     * @param opmaj      operation name (LOGIN, LOGOUT, PREDICTION_CREATED, PREDICTION_UPDATED, …)
-     * @param transmaj   detail text
-     * @param profilemaj actor username
-     * @param userId     actor user ID
-     * @param sessionId  HTTP session ID
-     * @param ipAddress  client IP
-     * @param userAgent  browser user-agent
-     * @param matchId    related match ID (null for non-prediction events)
-     * @param oldValue   previous prediction score string, e.g. "1-0" (null for CREATE)
-     * @param newValue   new prediction score string, e.g. "2-1"
-     */
-    @Transactional
+    /** Full 10-arg overload with session/audit context. */
     public void log(String opmaj, String transmaj, String profilemaj,
                     Long userId, String sessionId,
                     String ipAddress, String userAgent,
                     Long matchId, String oldValue, String newValue) {
-        try {
-            SystemActivityLog entry = new SystemActivityLog(
-                    opmaj, transmaj, profilemaj,
-                    userId, sessionId, ipAddress, userAgent,
-                    matchId, oldValue, newValue);
-            em.persist(entry);
-            em.flush();
+        String sql = "INSERT INTO system_activity_log "
+                + "(opmaj, datemaj, transmaj, profilemaj, user_id, session_id, "
+                + " ip_address, user_agent, match_id, old_value, new_value) "
+                + "VALUES (?,?,?,?,?,?,?,?,?,?,?)";
+        try (Connection c = jdbc.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, opmaj);
+            ps.setTimestamp(2, Timestamp.valueOf(LocalDateTime.now()));
+            ps.setString(3, transmaj);
+            ps.setString(4, profilemaj);
+            setNullableLong(ps, 5, userId);
+            ps.setString(6, sessionId);
+            ps.setString(7, ipAddress);
+            ps.setString(8, userAgent);
+            setNullableLong(ps, 9, matchId);
+            ps.setString(10, oldValue);
+            ps.setString(11, newValue);
+            ps.executeUpdate();
         } catch (Exception e) {
-            LOG.log(Level.WARNING,
-                    "[ActivityLogService] Failed to persist enriched log entry"
-                    + " opmaj=" + opmaj + " profile=" + profilemaj
-                    + ": " + e.getMessage(), e);
+            // Never let logging break the caller
+            LOG.log(Level.WARNING, "[ActivityLogService] Failed to persist log entry opmaj="
+                    + opmaj + " profile=" + profilemaj + ": " + e.getMessage(), e);
         }
     }
 
-    /**
-     * Returns all log entries ordered newest-first.
-     * Useful for an admin audit-log UI page later.
-     */
-    @Transactional
+    // ── Read ──────────────────────────────────────────────────────────────
+
     public List<SystemActivityLog> findAll() {
-        return em.createQuery(
-                "SELECT l FROM SystemActivityLog l ORDER BY l.datemaj DESC",
-                SystemActivityLog.class)
-                .getResultList();
+        String sql = "SELECT * FROM system_activity_log ORDER BY datemaj DESC";
+        return query(sql);
     }
 
-    /**
-     * Returns log entries for a specific profile, newest-first.
-     */
-    @Transactional
     public List<SystemActivityLog> findByProfile(String profilemaj) {
-        return em.createQuery(
-                "SELECT l FROM SystemActivityLog l WHERE l.profilemaj = :p ORDER BY l.datemaj DESC",
-                SystemActivityLog.class)
-                .setParameter("p", profilemaj)
-                .getResultList();
+        String sql = "SELECT * FROM system_activity_log WHERE profilemaj = ? ORDER BY datemaj DESC";
+        List<SystemActivityLog> list = new ArrayList<SystemActivityLog>();
+        try (Connection c = jdbc.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, profilemaj);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) list.add(map(rs));
+            }
+        } catch (SQLException e) {
+            LOG.log(Level.WARNING, "findByProfile failed", e);
+        }
+        return list;
     }
 
-    /**
-     * Returns log entries for a specific operation type, newest-first.
-     */
-    @Transactional
     public List<SystemActivityLog> findByOperation(String opmaj) {
         return findFiltered(null, opmaj);
     }
 
-    /**
-     * Returns log entries filtered by profile and/or operation type (nulls ignored), newest-first.
-     */
-    @Transactional
     public List<SystemActivityLog> findFiltered(String profilemaj, String opmaj) {
-        StringBuilder jpql = new StringBuilder(
-                "SELECT l FROM SystemActivityLog l WHERE 1=1");
-        if (profilemaj != null && !profilemaj.trim().isEmpty())
-            jpql.append(" AND LOWER(l.profilemaj) LIKE LOWER(:profile)");
-        if (opmaj != null && !opmaj.trim().isEmpty())
-            jpql.append(" AND l.opmaj = :op");
-        jpql.append(" ORDER BY l.datemaj DESC");
+        boolean hasProfile = profilemaj != null && !profilemaj.trim().isEmpty();
+        boolean hasOp      = opmaj      != null && !opmaj.trim().isEmpty();
 
-        jakarta.persistence.TypedQuery<SystemActivityLog> query =
-                em.createQuery(jpql.toString(), SystemActivityLog.class);
-        if (profilemaj != null && !profilemaj.trim().isEmpty())
-            query.setParameter("profile", "%" + profilemaj + "%");
-        if (opmaj != null && !opmaj.trim().isEmpty())
-            query.setParameter("op", opmaj);
+        StringBuilder sql = new StringBuilder(
+                "SELECT * FROM system_activity_log WHERE 1=1");
+        if (hasProfile) sql.append(" AND LOWER(profilemaj) LIKE LOWER(?)");
+        if (hasOp)      sql.append(" AND opmaj = ?");
+        sql.append(" ORDER BY datemaj DESC");
 
-        return query.getResultList();
+        List<SystemActivityLog> list = new ArrayList<SystemActivityLog>();
+        try (Connection c = jdbc.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql.toString())) {
+            int idx = 1;
+            if (hasProfile) ps.setString(idx++, "%" + profilemaj + "%");
+            if (hasOp)      ps.setString(idx,   opmaj);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) list.add(map(rs));
+            }
+        } catch (SQLException e) {
+            LOG.log(Level.WARNING, "findFiltered failed", e);
+        }
+        return list;
     }
 
-    /** Returns the most recent N log entries. */
-    @Transactional
     public List<SystemActivityLog> findRecent(int limit) {
-        return em.createQuery(
-                "SELECT l FROM SystemActivityLog l ORDER BY l.datemaj DESC",
-                SystemActivityLog.class)
-                .setMaxResults(limit)
-                .getResultList();
+        String sql = "SELECT * FROM system_activity_log ORDER BY datemaj DESC LIMIT " + limit;
+        return query(sql);
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────
+
+    private List<SystemActivityLog> query(String sql) {
+        List<SystemActivityLog> list = new ArrayList<SystemActivityLog>();
+        try (Connection c = jdbc.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) list.add(map(rs));
+        } catch (SQLException e) {
+            LOG.log(Level.WARNING, "query failed sql=" + sql, e);
+        }
+        return list;
+    }
+
+    private SystemActivityLog map(ResultSet rs) throws SQLException {
+        SystemActivityLog entry = new SystemActivityLog();
+        entry.setId(rs.getLong("id"));
+        entry.setOpmaj(rs.getString("opmaj"));
+        Timestamp ts = rs.getTimestamp("datemaj");
+        entry.setDatemaj(ts != null ? ts.toLocalDateTime() : LocalDateTime.now());
+        entry.setTransmaj(rs.getString("transmaj"));
+        entry.setProfilemaj(rs.getString("profilemaj"));
+        long uid = rs.getLong("user_id");
+        entry.setUserId(rs.wasNull() ? null : uid);
+        entry.setSessionId(rs.getString("session_id"));
+        entry.setIpAddress(rs.getString("ip_address"));
+        entry.setUserAgent(rs.getString("user_agent"));
+        long mid = rs.getLong("match_id");
+        entry.setMatchId(rs.wasNull() ? null : mid);
+        entry.setOldValue(rs.getString("old_value"));
+        entry.setNewValue(rs.getString("new_value"));
+        return entry;
+    }
+
+    private void setNullableLong(PreparedStatement ps, int idx, Long val) throws SQLException {
+        if (val == null) ps.setNull(idx, Types.BIGINT);
+        else ps.setLong(idx, val);
     }
 }
