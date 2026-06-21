@@ -1,53 +1,51 @@
 package com.worldcup.model;
 
-import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "whitelist")
+/**
+ * Plain Java model: Represents an approved Active Directory user in the whitelist.
+ *
+ * JPA/Hibernate annotations removed — persistence handled by
+ * {@link com.worldcup.repository.JpaWhitelistRepository} via pure JDBC.
+ *
+ * NOTE: The database column name is "adusername" (no underscore).
+ * The field is named adUsername here to preserve the existing Java API.
+ */
 public class WhitelistEntry {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "ad_username", nullable = false, unique = true)
+    /** Maps to DB column "adusername". */
     private String adUsername;
 
-    @Column(name = "employee_name")
     private String employeeName;
-
     private String email;
-
-    @Column(nullable = false)
     private boolean enabled = true;
-
-    @Column(name = "added_at")
     private LocalDateTime addedAt = LocalDateTime.now();
-
-    @Column(name = "added_by_user_id")
     private Long addedByUserId;
 
     public WhitelistEntry() {}
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    // ── Accessors ─────────────────────────────────────────────────────────
 
-    public String getAdUsername() { return adUsername; }
-    public void setAdUsername(String adUsername) { this.adUsername = adUsername; }
+    public Long getId()                                 { return id; }
+    public void setId(Long id)                          { this.id = id; }
 
-    public String getEmployeeName() { return employeeName; }
-    public void setEmployeeName(String employeeName) { this.employeeName = employeeName; }
+    public String getAdUsername()                       { return adUsername; }
+    public void setAdUsername(String s)                 { this.adUsername = s; }
 
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
+    public String getEmployeeName()                     { return employeeName; }
+    public void setEmployeeName(String s)               { this.employeeName = s; }
 
-    public boolean isEnabled() { return enabled; }
-    public void setEnabled(boolean enabled) { this.enabled = enabled; }
+    public String getEmail()                            { return email; }
+    public void setEmail(String s)                      { this.email = s; }
 
-    public LocalDateTime getAddedAt() { return addedAt; }
-    public void setAddedAt(LocalDateTime addedAt) { this.addedAt = addedAt; }
+    public boolean isEnabled()                          { return enabled; }
+    public void setEnabled(boolean b)                   { this.enabled = b; }
 
-    public Long getAddedByUserId() { return addedByUserId; }
-    public void setAddedByUserId(Long addedByUserId) { this.addedByUserId = addedByUserId; }
+    public LocalDateTime getAddedAt()                   { return addedAt; }
+    public void setAddedAt(LocalDateTime d)             { this.addedAt = d; }
+
+    public Long getAddedByUserId()                      { return addedByUserId; }
+    public void setAddedByUserId(Long id)               { this.addedByUserId = id; }
 }

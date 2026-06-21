@@ -116,7 +116,8 @@ public class ActivityLogService {
     }
 
     public List<SystemActivityLog> findRecent(int limit) {
-        String sql = "SELECT * FROM system_activity_log ORDER BY datemaj DESC LIMIT " + limit;
+        // FETCH FIRST n ROWS ONLY is portable across Oracle and PostgreSQL
+        String sql = "SELECT * FROM system_activity_log ORDER BY datemaj DESC FETCH FIRST " + limit + " ROWS ONLY";
         return query(sql);
     }
 

@@ -1,41 +1,35 @@
 package com.worldcup.model;
 
-import jakarta.persistence.*;
-
-@Entity
-@Table(name = "teams")
+/**
+ * Plain Java model: Represents a national team in the tournament.
+ *
+ * JPA/Hibernate annotations removed — persistence handled by
+ * {@link com.worldcup.repository.JpaTeamRepository} via pure JDBC.
+ */
 public class Team {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Column(nullable = false, unique = true)
     private String name;
-
-    @Column(name = "short_code", length = 3, unique = true)
     private String shortCode;
-
-    @Column(name = "logo_path")
     private String logoPath;
-
-    @Column(name = "flag_emoji")
     private String flagEmoji;
 
     public Team() {}
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    // ── Accessors ─────────────────────────────────────────────────────────
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public Long getId()                         { return id; }
+    public void setId(Long id)                  { this.id = id; }
 
-    public String getShortCode() { return shortCode; }
-    public void setShortCode(String shortCode) { this.shortCode = shortCode; }
+    public String getName()                     { return name; }
+    public void setName(String name)            { this.name = name; }
 
-    public String getLogoPath() { return logoPath; }
-    public void setLogoPath(String logoPath) { this.logoPath = logoPath; }
+    public String getShortCode()                { return shortCode; }
+    public void setShortCode(String s)          { this.shortCode = s; }
 
-    public String getFlagEmoji() { return flagEmoji; }
-    public void setFlagEmoji(String flagEmoji) { this.flagEmoji = flagEmoji; }
+    public String getLogoPath()                 { return logoPath; }
+    public void setLogoPath(String p)           { this.logoPath = p; }
+
+    public String getFlagEmoji()                { return flagEmoji; }
+    public void setFlagEmoji(String e)          { this.flagEmoji = e; }
 }

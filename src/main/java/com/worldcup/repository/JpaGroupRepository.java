@@ -170,17 +170,25 @@ public class JpaGroupRepository implements GroupRepository {
 
     private void saveGroupTeams(Connection c, Group group) throws SQLException {
         if (group.getId() == null || group.getTeams() == null) return;
-        String sql = "INSERT INTO group_teams (group_id, team_id) VALUES (?,?) "
-                + "ON CONFLICT DO NOTHING";
-        try (PreparedStatement ps = c.prepareStatement(sql)) {
+        // Portable insert: check existence first to avoid ON CONFLICT (PostgreSQL-only).
+        // Works on Oracle and PostgreSQL without any SQL differences.
+        String checkSql  = "SELECT COUNT(*) FROM group_teams WHERE group_id = ? AND team_id = ?";
+        String insertSql = "INSERT INTO group_teams (group_id, team_id) VALUES (?,?)";
+        try (PreparedStatement chk = c.prepareStatement(checkSql);
+             PreparedStatement ins = c.prepareStatement(insertSql)) {
             for (Team t : group.getTeams()) {
-                if (t.getId() != null) {
-                    ps.setLong(1, group.getId());
-                    ps.setLong(2, t.getId());
-                    ps.addBatch();
+                if (t.getId() == null) continue;
+                chk.setLong(1, group.getId());
+                chk.setLong(2, t.getId());
+                try (ResultSet rs = chk.executeQuery()) {
+                    if (rs.next() && rs.getInt(1) == 0) {
+                        ins.setLong(1, group.getId());
+                        ins.setLong(2, t.getId());
+                        ins.addBatch();
+                    }
                 }
             }
-            ps.executeBatch();
+            ins.executeBatch();
         }
     }
 

@@ -89,7 +89,8 @@ public class JpaUserSessionRepository {
     }
 
     public Optional<UserSession> findActiveByUserId(Long userId) {
-        String sql = "SELECT * FROM user_sessions WHERE user_id = ? AND status = 'ACTIVE' LIMIT 1";
+        // FETCH FIRST 1 ROWS ONLY is portable across Oracle and PostgreSQL
+        String sql = "SELECT * FROM user_sessions WHERE user_id = ? AND status = 'ACTIVE' FETCH FIRST 1 ROWS ONLY";
         try (Connection c = jdbc.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setLong(1, userId);
