@@ -14,6 +14,10 @@ import java.util.logging.Logger;
 
 /**
  * Pure JDBC implementation of WhitelistRepository.
+ *
+ * NOTE: The actual DB column name is "adusername" (no underscore),
+ * matching how PostgreSQL created it from the legacy Hibernate entity.
+ * All SQL in this class uses the real DB column name "adusername".
  */
 @ApplicationScoped
 public class JpaWhitelistRepository implements WhitelistRepository {
@@ -25,7 +29,7 @@ public class JpaWhitelistRepository implements WhitelistRepository {
 
     @Override
     public WhitelistEntry save(WhitelistEntry entry) {
-        String sql = "INSERT INTO whitelist (ad_username, employee_name, email, enabled, added_at, added_by_user_id) "
+        String sql = "INSERT INTO whitelist (adusername, employee_name, email, enabled, added_at, added_by_user_id) "
                 + "VALUES (?,?,?,?,?,?)";
         try (Connection c = jdbc.getConnection();
              PreparedStatement ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -70,7 +74,7 @@ public class JpaWhitelistRepository implements WhitelistRepository {
     @Override
     public Optional<WhitelistEntry> findByAdUsername(String adUsername) {
         // Case-insensitive match — handles both upper and lower case QNB usernames
-        String sql = "SELECT * FROM whitelist WHERE LOWER(ad_username) = LOWER(?)";
+        String sql = "SELECT * FROM whitelist WHERE LOWER(adusername) = LOWER(?)";
         try (Connection c = jdbc.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, adUsername);
@@ -99,7 +103,7 @@ public class JpaWhitelistRepository implements WhitelistRepository {
 
     @Override
     public WhitelistEntry update(WhitelistEntry entry) {
-        String sql = "UPDATE whitelist SET ad_username=?, employee_name=?, email=?, enabled=?, "
+        String sql = "UPDATE whitelist SET adusername=?, employee_name=?, email=?, enabled=?, "
                 + "added_by_user_id=? WHERE id=?";
         try (Connection c = jdbc.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
@@ -137,7 +141,8 @@ public class JpaWhitelistRepository implements WhitelistRepository {
     private WhitelistEntry map(ResultSet rs) throws SQLException {
         WhitelistEntry e = new WhitelistEntry();
         e.setId(rs.getLong("id"));
-        e.setAdUsername(rs.getString("ad_username"));
+        // DB column is "adusername" (no underscore)
+        e.setAdUsername(rs.getString("adusername"));
         e.setEmployeeName(rs.getString("employee_name"));
         e.setEmail(rs.getString("email"));
         e.setEnabled(rs.getBoolean("enabled"));

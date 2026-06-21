@@ -11,6 +11,8 @@ import jakarta.inject.Named;
 
 import java.io.Serializable;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -20,6 +22,8 @@ import java.util.List;
  *  - Active session list
  *  - Full session history
  *  - Activity audit log with filtering by username and event type
+ *
+ * Java 8 compatible — no var, no List.of(), no switch expressions.
  */
 @Named
 @ViewScoped
@@ -33,8 +37,8 @@ public class AdminAuditBean implements Serializable {
     @Inject private ActivityLogService activityLogService;
 
     // ── Session data ──────────────────────────────────────────────────────
-    private List<UserSession> activeSessions;
-    private List<UserSession> allSessions;
+    private List<UserSession>       activeSessions;
+    private List<UserSession>       allSessions;
 
     // ── Audit log data ────────────────────────────────────────────────────
     private List<SystemActivityLog> auditLogs;
@@ -43,12 +47,15 @@ public class AdminAuditBean implements Serializable {
     private String filterUsername;
     private String filterEventType;
 
-    /** Available event types for the dropdown filter. */
-    private static final String[] EVENT_TYPES = {
+    /**
+     * Available event types for the dropdown filter.
+     * The empty string entry renders as "— All events —" in the XHTML.
+     */
+    private static final List<String> EVENT_TYPES = Arrays.asList(
         "", "LOGIN", "LOGOUT", "PREDICTION_CREATED", "PREDICTION_UPDATED",
         "SESSION_INVALIDATED", "PRED-SUB", "PRED-UPD", "RES-SAV",
-        "CRE", "MATCH-DEL", "RND-UPD"
-    };
+        "CRE", "MATCH-DEL", "RND-UPD", "SESSION_CONFLICT"
+    );
 
     @PostConstruct
     public void init() {
@@ -75,10 +82,13 @@ public class AdminAuditBean implements Serializable {
 
     /** Admin action: forcibly terminate an active session. */
     public void terminateSession(Long sessionDbId) {
-        allSessions.stream()
-                .filter(s -> s.getId().equals(sessionDbId))
-                .findFirst()
-                .ifPresent(s -> userSessionService.onLogout(s.getSessionId()));
+        if (sessionDbId == null || allSessions == null) return;
+        for (UserSession s : allSessions) {
+            if (sessionDbId.equals(s.getId())) {
+                userSessionService.onLogout(s.getSessionId());
+                break;
+            }
+        }
         refresh();
     }
 
@@ -98,14 +108,54 @@ public class AdminAuditBean implements Serializable {
     }
 
     public String eventBadgeClass(String opmaj) {
-        if (opmaj == null) return "";
+        if (opmaj == null) return "ev-default";
         if ("LOGIN".equals(opmaj))               return "ev-login";
         if ("LOGOUT".equals(opmaj))              return "ev-logout";
         if ("PREDICTION_CREATED".equals(opmaj))  return "ev-pred-new";
+        if ("PRED-SUB".equals(opmaj))            return "ev-pred-new";
         if ("PREDICTION_UPDATED".equals(opmaj))  return "ev-pred-upd";
+        if ("PRED-UPD".equals(opmaj))            return "ev-pred-upd";
         if ("SESSION_INVALIDATED".equals(opmaj)) return "ev-session-inv";
         if ("SESSION_CONFLICT".equals(opmaj))    return "ev-session-inv";
         return "ev-default";
+    }
+
+    /**
+     * Returns the label for a dropdown event-type entry.
+     * Replaces the broken EL expression #{et.empty ? '...' : et}
+     * which fails because String.empty() is not a valid EL method.
+     * Called from admin-audit.xhtml as #{adminAuditBean.eventTypeLabel(et)}.
+     */
+    public String eventTypeLabel(String et) {
+        if (et == null || et.trim().isEmpty()) {
+            return "\u2014 All events \u2014";
+        }
+        return et;
+    }
+
+    /**
+     * Truncates a User-Agent string to at most {@code maxLen} characters.
+     * Replaces the broken EL expression [a,b].min() which does not work in JSF EL.
+     * Called from XHTML as #{adminAuditBean.truncateUserAgent(s.userAgent)}.
+     *
+     * @param value the raw User-Agent string (may be null)
+     * @return truncated string or '-' if null/empty
+     */
+    public String truncateUserAgent(String value) {
+        return truncate(value, 60);
+    }
+
+    /**
+     * Truncates any string to the given maximum length.
+     *
+     * @param value  the string to truncate (may be null)
+     * @param maxLen maximum number of characters to return
+     * @return truncated string, or '-' if null/empty
+     */
+    public String truncate(String value, int maxLen) {
+        if (value == null || value.trim().isEmpty()) return "-";
+        if (value.length() <= maxLen) return value;
+        return value.substring(0, maxLen) + "\u2026"; // ellipsis
     }
 
     // ── Accessors ─────────────────────────────────────────────────────────
@@ -114,13 +164,14 @@ public class AdminAuditBean implements Serializable {
     public List<UserSession>       getAllSessions()      { return allSessions; }
     public List<SystemActivityLog> getAuditLogs()       { return auditLogs; }
 
-    public String getFilterUsername()                           { return filterUsername; }
-    public void   setFilterUsername(String filterUsername)      { this.filterUsername = filterUsername; }
+    public String getFilterUsername()                          { return filterUsername; }
+    public void   setFilterUsername(String filterUsername)     { this.filterUsername = filterUsername; }
 
-    public String getFilterEventType()                          { return filterEventType; }
-    public void   setFilterEventType(String filterEventType)    { this.filterEventType = filterEventType; }
+    public String getFilterEventType()                         { return filterEventType; }
+    public void   setFilterEventType(String filterEventType)   { this.filterEventType = filterEventType; }
 
-    public String[] getEventTypes() { return EVENT_TYPES; }
+    /** Returns the event-type list for the filter dropdown. */
+    public List<String> getEventTypes() { return EVENT_TYPES; }
 
     public int getActiveSessionCount() {
         return activeSessions == null ? 0 : activeSessions.size();
