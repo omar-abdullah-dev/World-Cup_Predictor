@@ -87,7 +87,8 @@ public class UserSessionService {
     @Transactional
     public ValidationResult validateAndTouch(String httpSessionId) {
         Optional<UserSession> opt = sessionRepository.findBySessionId(httpSessionId);
-        if (opt.isEmpty()) {
+        // Java 8 compatible: use !isPresent() instead of isEmpty() (added in Java 11)
+        if (!opt.isPresent()) {
             return ValidationResult.INVALID;
         }
 
