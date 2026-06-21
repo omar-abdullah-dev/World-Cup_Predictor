@@ -10,91 +10,101 @@
     <ui:define name="title">Admin Whitelist - World Cup Predictor</ui:define>
 
     <ui:define name="content">
+        <!-- Page Header -->
         <div class="page-header">
-            <h2>&#128203; Whitelist Manager</h2>
-            <p>Authorize Active Directory users to access the World Cup Prediction platform</p>
+            <h2>📝 Whitelist Manager</h2>
+            <p>Authorize Active Directory accounts to gain access to the prediction platform.</p>
         </div>
 
+        <!-- Feedback messages -->
         <h:messages globalOnly="false" layout="list" styleClass="faces-messages" 
                     infoClass="message-success" errorClass="message-error"/>
 
         <!-- Add Whitelist Entry Card -->
         <div class="card">
-            <h3>Add User to Whitelist</h3>
-            <h:form id="add-whitelist-form" styleClass="form-grid">
+            <h3>➕ Authorize User via Active Directory</h3>
+            <h:form id="add-whitelist-form" styleClass="form-grid" style="margin-bottom:0;">
                 <div class="form-group">
                     <label for="adUsername">AD Username (sAMAccountName)</label>
                     <h:inputText id="adUsername" value="#{adminWhitelistBean.adUsername}" required="true" 
-                                 requiredMessage="AD Username is required" styleClass="form-input"/>
+                                 requiredMessage="AD Username is required" styleClass="form-input"
+                                 placeholder="e.g. m_ahmed"/>
                 </div>
                 <div class="form-group">
                     <label for="employeeName">Full Name</label>
                     <h:inputText id="employeeName" value="#{adminWhitelistBean.employeeName}" required="true"
-                                 requiredMessage="Full Name is required" styleClass="form-input"/>
+                                 requiredMessage="Full Name is required" styleClass="form-input"
+                                 placeholder="e.g. Mohamed Ahmed"/>
                 </div>
                 <div class="form-group">
                     <label for="email">Email Address</label>
                     <h:inputText id="email" value="#{adminWhitelistBean.email}" required="true"
-                                 requiredMessage="Email is required" styleClass="form-input">
+                                 requiredMessage="Email is required" styleClass="form-input"
+                                 placeholder="e.g. name@qnb.com.eg">
                         <f:validateRegex pattern="^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$"/>
                     </h:inputText>
                 </div>
-                <div class="form-actions" style="display: flex; align-items: flex-end;">
-                    <h:commandButton value="Authorize User" action="#{adminWhitelistBean.addEntry}" styleClass="btn btn-primary"/>
+                <div class="form-actions" style="display: flex; align-items: flex-end; margin-bottom: 0;">
+                    <h:commandButton value="Authorize User" action="#{adminWhitelistBean.addEntry}" styleClass="btn btn-primary" style="width: 100%;"/>
                 </div>
             </h:form>
         </div>
 
-        <!-- Whitelist Directory -->
+        <!-- Whitelist Directory Table -->
         <div class="card">
-            <h3>Whitelisted Users Directory</h3>
-            <h:form id="whitelist-table-form">
+            <h3>📋 Whitelisted Accounts Directory <span style="font-weight: normal; font-size: 0.85em; color: var(--text-muted); margin-left: var(--space-xs);">(Total: #{adminWhitelistBean.entries.size()})</span></h3>
+            
+            <h:form id="whitelist-table-form" style="margin:0; padding:0;">
                 <h:panelGroup rendered="#{empty adminWhitelistBean.entries}">
-                    <p class="form-hint">No users have been whitelisted yet.</p>
+                    <div class="empty-state">
+                        <p>No Active Directory accounts have been whitelisted yet.</p>
+                    </div>
                 </h:panelGroup>
                 
                 <h:panelGroup rendered="#{not empty adminWhitelistBean.entries}">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>AD Username</th>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <ui:repeat value="#{adminWhitelistBean.entries}" var="entry">
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
                                 <tr>
-                                    <td><strong><h:outputText value="#{entry.adUsername}"/></strong></td>
-                                    <td><h:outputText value="#{entry.employeeName}"/></td>
-                                    <td><h:outputText value="#{entry.email}"/></td>
-                                    <td>
-                                        <span class="status-badge #{entry.enabled ? 'status-finished' : 'status-closed'}">
-                                            <h:outputText value="#{entry.enabled ? 'Enabled' : 'Disabled'}"/>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <h:commandLink value="#{entry.enabled ? 'Disable' : 'Enable'}" 
-                                                       action="#{adminWhitelistBean.toggleStatus(entry.id, not entry.enabled)}"
-                                                       styleClass="btn btn-sm #{entry.enabled ? 'btn-select' : 'btn-success'}"
-                                                       style="margin-right: 8px; text-decoration: none; display: inline-block;">
-                                            <f:ajax execute="@form" render="@form :add-whitelist-form"/>
-                                        </h:commandLink>
-                                        
-                                        <h:commandLink value="Remove" 
-                                                       action="#{adminWhitelistBean.removeEntry(entry.id)}"
-                                                       onclick="return confirm('Are you sure you want to remove this user from the whitelist?');"
-                                                       styleClass="btn btn-sm"
-                                                       style="background: #dc2626; color: white; text-decoration: none; display: inline-block;">
-                                            <f:ajax execute="@form" render="@form :add-whitelist-form"/>
-                                        </h:commandLink>
-                                    </td>
+                                    <th>AD Username</th>
+                                    <th>Employee Name</th>
+                                    <th>Email Address</th>
+                                    <th>Access Status</th>
+                                    <th>Actions</th>
                                 </tr>
-                            </ui:repeat>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <ui:repeat value="#{adminWhitelistBean.entries}" var="entry">
+                                    <tr>
+                                        <td><strong><h:outputText value="#{entry.adUsername}"/></strong></td>
+                                        <td><h:outputText value="#{entry.employeeName}"/></td>
+                                        <td><h:outputText value="#{entry.email}"/></td>
+                                        <td>
+                                            <span class="status-badge #{entry.enabled ? 'status-finished' : 'status-closed'}">
+                                                <h:outputText value="#{entry.enabled ? 'Enabled' : 'Disabled'}"/>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <h:commandLink value="#{entry.enabled ? 'Disable' : 'Enable'}" 
+                                                           action="#{adminWhitelistBean.toggleStatus(entry.id, not entry.enabled)}"
+                                                           styleClass="btn btn-sm #{entry.enabled ? 'btn-secondary' : 'btn-success'}"
+                                                           style="margin-right: 8px; text-decoration: none; display: inline-flex; width: auto;">
+                                                <f:ajax execute="@form" render="@form :add-whitelist-form"/>
+                                            </h:commandLink>
+                                            
+                                            <h:commandLink value="Remove" 
+                                                           action="#{adminWhitelistBean.removeEntry(entry.id)}"
+                                                           onclick="return confirm('Are you sure you want to remove this user from the whitelist?');"
+                                                           styleClass="btn btn-sm btn-danger"
+                                                           style="text-decoration: none; display: inline-flex; width: auto;">
+                                                <f:ajax execute="@form" render="@form :add-whitelist-form"/>
+                                            </h:commandLink>
+                                        </td>
+                                    </tr>
+                                </ui:repeat>
+                            </tbody>
+                        </table>
+                    </div>
                 </h:panelGroup>
             </h:form>
         </div>

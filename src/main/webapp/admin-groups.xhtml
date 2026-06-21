@@ -10,82 +10,86 @@
     <ui:define name="title">Group Administration - World Cup Predictor</ui:define>
 
     <ui:define name="content">
+        <!-- Page Header -->
         <div class="page-header">
-            <h2>&#127750; Group Administration</h2>
-            <p>Define group stage tables, manage prediction statuses, and adjust tournament pools</p>
+            <h2>🛠️ Pool Administration</h2>
+            <p>Admin Control: Configure tournament pools, assign participating nations, and manage match schedules.</p>
         </div>
 
+        <!-- Feedback Messages -->
         <h:messages globalOnly="false" layout="list" styleClass="faces-messages"
                     infoClass="message-success" errorClass="message-error"/>
 
-        <!-- Create Group Form (Conditional) -->
+        <!-- Add Group Form panel -->
         <h:panelGroup id="create-group-panel">
-            <h:form rendered="#{adminGroupBean.currentGroup == null}" styleClass="card" style="text-align: center; padding: 30px;">
-                <h3>Add New Tournament Group</h3>
-                <p class="form-hint" style="margin-bottom: 20px;">Add a new group (e.g. Group A, Group B) to database</p>
-                <h:commandButton value="Add New Group" action="#{adminGroupBean.prepareCreate}" styleClass="btn btn-primary">
+            <h:form rendered="#{adminGroupBean.currentGroup == null}" styleClass="card" style="text-align: center; padding: var(--space-xl) var(--space-lg);">
+                <h3>Create New Tournament Pool</h3>
+                <p class="form-hint" style="margin-bottom: var(--space-lg);">Add a new tournament pool (e.g. Group A, Group B) and seed matches.</p>
+                <h:commandButton value="Add New Pool" action="#{adminGroupBean.prepareCreate}" styleClass="btn btn-primary" style="display:inline-flex; width:auto;">
                     <f:ajax render=":create-group-panel"/>
                 </h:commandButton>
             </h:form>
 
             <h:form id="group-form" rendered="#{adminGroupBean.currentGroup != null}" styleClass="card">
-                <h3>Add Group Details</h3>
+                <h3>Pool Parameters</h3>
                 <div class="form-grid">
-                    <div class="form-group" style="width: 100%;">
+                    <div class="form-group">
                         <label for="round">Competition Round</label>
-                        <h:selectOneMenu id="round" value="#{adminGroupBean.selectedRoundId}" styleClass="form-input" style="max-width: 300px;">
+                        <h:selectOneMenu id="round" value="#{adminGroupBean.selectedRoundId}" styleClass="form-input">
                             <f:selectItem itemLabel="-- Select Round --" itemValue="#{null}" />
                             <f:selectItems value="#{adminGroupBean.allRounds}" var="r" itemLabel="#{r.stage.displayName}" itemValue="#{r.id}"/>
                         </h:selectOneMenu>
                     </div>
 
-                    <div class="form-group" style="width: 100%;">
-                        <label for="name">Group Name</label>
+                    <div class="form-group">
+                        <label for="name">Pool Name</label>
                         <h:inputText id="name" value="#{adminGroupBean.currentGroup.name}" required="true" 
                                      requiredMessage="Group name is required" styleClass="form-input"
-                                     style="max-width: 300px;"/>
+                                     placeholder="e.g. Group A"/>
                     </div>
                 </div>
 
-                <hr style="border: 1px solid #e5e7eb; margin: 20px 0;"/>
-                <h4 style="margin-bottom: 15px; color: #2c3e50;">Team Assignments &amp; Fixtures</h4>
-                <p class="form-hint" style="margin-bottom: 20px;">Define the matches for this group. The teams selected will automatically be added to the group.</p>
+                <hr style="border: none; border-top: 1px solid var(--border-color); margin: var(--space-lg) 0;"/>
+                <h4 style="margin-bottom: var(--space-xs); color: var(--text-primary);">Assign Pool Fixtures</h4>
+                <p class="form-hint" style="margin-bottom: var(--space-md);">Define the matches for this pool. Selected teams will automatically join the pool.</p>
 
-                <h:panelGroup id="fixtures-container">
+                <!-- Dynamic Fixtures Table List -->
+                <h:panelGroup id="fixtures-container" layout="block">
                     <ui:repeat value="#{adminGroupBean.fixtures}" var="fixture" varStatus="status">
-                        <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 10px;">
-                            <span style="color: #7f8c8d; font-size: 0.9em;">Match #{status.index + 1}</span>
+                        <div style="display: flex; align-items: center; justify-content: center; gap: var(--space-sm); margin-bottom: var(--space-xs); flex-wrap: wrap;">
+                            <span style="color: var(--text-muted); font-size: 0.9em; font-weight:600; min-width: 60px;">Match #{status.index + 1}</span>
                             
-                            <h:selectOneMenu value="#{fixture.teamAId}" styleClass="form-input" style="width: 200px;">
-                                <f:selectItem itemLabel="-- Team A --" itemValue="#{null}" />
+                            <h:selectOneMenu value="#{fixture.teamAId}" styleClass="form-input" style="width: 180px;">
+                                <f:selectItem itemLabel="-- Select Team A --" itemValue="#{null}" />
                                 <f:selectItems value="#{adminGroupBean.allTeams}" var="t" itemLabel="#{t.name}" itemValue="#{t.id}"/>
                             </h:selectOneMenu>
 
-                            <span style="font-weight: bold; color: #95a5a6;">VS</span>
+                            <span style="font-weight: 800; color: var(--text-muted);">VS</span>
 
-                            <h:selectOneMenu value="#{fixture.teamBId}" styleClass="form-input" style="width: 200px;">
-                                <f:selectItem itemLabel="-- Team B --" itemValue="#{null}" />
+                            <h:selectOneMenu value="#{fixture.teamBId}" styleClass="form-input" style="width: 180px;">
+                                <f:selectItem itemLabel="-- Select Team B --" itemValue="#{null}" />
                                 <f:selectItems value="#{adminGroupBean.allTeams}" var="t" itemLabel="#{t.name}" itemValue="#{t.id}"/>
                             </h:selectOneMenu>
                             
                             <h:commandLink action="#{adminGroupBean.removeFixtureRow(fixture)}" 
-                                           style="color: #e74c3c; font-size: 1.2em; text-decoration: none;" title="Remove Fixture">
+                                           style="color: var(--danger); font-size: 1.25em; text-decoration: none; padding: 4px;" title="Remove Fixture">
                                 <f:ajax render="@form"/>
-                                &#10006;
+                                ✕
                             </h:commandLink>
                         </div>
                     </ui:repeat>
                     
-                    <div style="text-align: center; margin-top: 15px;">
-                        <h:commandButton value="+ Add Another Fixture" action="#{adminGroupBean.addFixtureRow}" styleClass="btn btn-sm" style="background: #ecf0f1; color: #2c3e50;">
+                    <div style="text-align: center; margin-top: var(--space-sm);">
+                        <h:commandButton value="➕ Add Another Fixture" action="#{adminGroupBean.addFixtureRow}" styleClass="btn btn-secondary btn-sm" style="width:auto; display:inline-flex;">
                             <f:ajax render="fixtures-container"/>
                         </h:commandButton>
                     </div>
                 </h:panelGroup>
 
-                <div class="form-actions" style="margin-top: 25px; display: flex; gap: 10px; justify-content: center;">
-                    <h:commandButton value="Save Group" action="#{adminGroupBean.save}" styleClass="btn btn-primary"/>
-                    <h:commandButton value="Cancel" styleClass="btn" style="background: #95a5a6; color: white;" immediate="true">
+                <!-- Actions -->
+                <div class="form-actions" style="margin-top: var(--space-lg); display: flex; gap: var(--space-xs); justify-content: center;">
+                    <h:commandButton value="Save Pool" action="#{adminGroupBean.save}" styleClass="btn btn-primary"/>
+                    <h:commandButton value="Cancel" styleClass="btn btn-secondary" immediate="true">
                         <f:setPropertyActionListener target="#{adminGroupBean.currentGroup}" value="#{null}"/>
                         <f:ajax render=":create-group-panel"/>
                     </h:commandButton>
@@ -93,85 +97,94 @@
             </h:form>
         </h:panelGroup>
 
-        <!-- Current Groups Table -->
+        <!-- Current Groups Overview Table -->
         <div class="card">
-            <h3>Groups Overview</h3>
-            <h:form id="groups-table-form">
+            <h3>📋 Pools Directory Overview <span style="font-weight: normal; font-size: 0.85em; color: var(--text-muted); margin-left: var(--space-xs);">(Total: #{adminGroupBean.groups.size()})</span></h3>
+            
+            <h:form id="groups-table-form" style="margin:0; padding:0;">
                 <h:panelGroup rendered="#{empty adminGroupBean.groups}">
-                    <p class="form-hint">No groups created yet.</p>
+                    <div class="empty-state">
+                        <p>No tournament pools have been configured yet.</p>
+                    </div>
                 </h:panelGroup>
 
                 <h:panelGroup rendered="#{not empty adminGroupBean.groups}">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Group</th>
-                                <th>Teams</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <ui:repeat value="#{adminGroupBean.groups}" var="g">
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
                                 <tr>
-                                    <td><strong><h:outputText value="#{g.name}"/></strong></td>
-                                    <td>
-                                        <ui:repeat value="#{g.teams}" var="t" varStatus="ts">
-                                            <span class="team-initials-badge" title="#{t.name}" style="font-size:0.8em; padding: 2px 5px; margin-right: 4px;"><h:outputText value="#{t.shortCode}"/></span>
-                                        </ui:repeat>
-                                        <h:panelGroup rendered="#{empty g.teams}">
-                                            <span style="color:#9ca3af; font-style:italic; font-size:0.9em;">No teams</span>
-                                        </h:panelGroup>
-                                    </td>
-                                    <td>
-                                        <span class="status-badge #{g.status == 'OPEN' ? 'status-finished' : (g.status == 'LOCKED' ? 'status-closed' : 'status-open')}">
-                                            <h:outputText value="#{g.status}"/>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <h:commandLink value="Open" 
-                                                       action="#{adminGroupBean.updateStatus(g.id, 'OPEN')}"
-                                                       rendered="#{g.status != 'OPEN'}"
-                                                       styleClass="btn btn-sm btn-success"
-                                                       style="margin-right: 8px; text-decoration: none; display: inline-block;">
-                                            <f:ajax execute="@form" render="@form :create-group-panel"/>
-                                        </h:commandLink>
-
-                                        <h:commandLink value="Lock" 
-                                                       action="#{adminGroupBean.updateStatus(g.id, 'LOCKED')}"
-                                                       rendered="#{g.status == 'OPEN'}"
-                                                       styleClass="btn btn-sm btn-select"
-                                                       style="margin-right: 8px; text-decoration: none; display: inline-block; background: #e67e22;">
-                                            <f:ajax execute="@form" render="@form :create-group-panel"/>
-                                        </h:commandLink>
-
-                                        <h:commandLink value="Close" 
-                                                       action="#{adminGroupBean.updateStatus(g.id, 'CLOSED')}"
-                                                       rendered="#{g.status != 'CLOSED'}"
-                                                       styleClass="btn btn-sm"
-                                                       style="margin-right: 8px; background: #2c3e50; color: white; text-decoration: none; display: inline-block;">
-                                            <f:ajax execute="@form" render="@form :create-group-panel"/>
-                                        </h:commandLink>
-
-                                        <h:commandLink value="Edit" 
-                                                       action="#{adminGroupBean.prepareEdit(g)}"
-                                                       styleClass="btn btn-sm"
-                                                       style="margin-right: 8px; background: #3498db; color: white; text-decoration: none; display: inline-block;">
-                                            <f:ajax execute="@form" render=":create-group-panel"/>
-                                        </h:commandLink>
-
-                                        <h:commandLink value="Delete" 
-                                                       action="#{adminGroupBean.deleteGroup(g.id)}"
-                                                       onclick="return confirm('Are you sure you want to delete this group?');"
-                                                       styleClass="btn btn-sm"
-                                                       style="background: #dc2626; color: white; text-decoration: none; display: inline-block;">
-                                            <f:ajax execute="@form" render="@form :create-group-panel"/>
-                                        </h:commandLink>
-                                    </td>
+                                    <th>Pool Name</th>
+                                    <th>Assigned Nations</th>
+                                    <th>Current State</th>
+                                    <th>Actions</th>
                                 </tr>
-                            </ui:repeat>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <ui:repeat value="#{adminGroupBean.groups}" var="g">
+                                    <tr>
+                                        <td><strong><h:outputText value="#{g.name}"/></strong></td>
+                                        <td>
+                                            <div style="display:flex; flex-wrap:wrap; gap: 4px;">
+                                                <ui:repeat value="#{g.teams}" var="t">
+                                                    <span class="badge badge-knockout" title="#{t.name}">
+                                                        <h:outputText value="#{t.shortCode}"/>
+                                                    </span>
+                                                </ui:repeat>
+                                                <h:panelGroup rendered="#{empty g.teams}">
+                                                    <span style="color:var(--text-muted); font-style:italic; font-size:0.9em;">No assigned nations</span>
+                                                </h:panelGroup>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="status-badge #{g.status == 'OPEN' ? 'status-finished' : (g.status == 'LOCKED' ? 'status-closed' : 'status-open')}">
+                                                <h:outputText value="#{g.status}"/>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <h:commandLink value="Open" 
+                                                           action="#{adminGroupBean.updateStatus(g.id, 'OPEN')}"
+                                                           rendered="#{g.status != 'OPEN'}"
+                                                           styleClass="btn btn-sm btn-success"
+                                                           style="margin-right: 6px; text-decoration: none; display: inline-flex; width:auto;">
+                                                <f:ajax execute="@form" render="@form :create-group-panel"/>
+                                            </h:commandLink>
+
+                                            <h:commandLink value="Lock" 
+                                                           action="#{adminGroupBean.updateStatus(g.id, 'LOCKED')}"
+                                                           rendered="#{g.status == 'OPEN'}"
+                                                           styleClass="btn btn-sm btn-secondary"
+                                                           style="margin-right: 6px; text-decoration: none; display: inline-flex; width:auto; border-color:var(--warning); color:var(--warning);">
+                                                <f:ajax execute="@form" render="@form :create-group-panel"/>
+                                            </h:commandLink>
+
+                                            <h:commandLink value="Close" 
+                                                           action="#{adminGroupBean.updateStatus(g.id, 'CLOSED')}"
+                                                           rendered="#{g.status != 'CLOSED'}"
+                                                           styleClass="btn btn-sm btn-secondary"
+                                                           style="margin-right: 6px; text-decoration: none; display: inline-flex; width:auto; border-color:var(--text-muted); color:var(--text-muted);">
+                                                <f:ajax execute="@form" render="@form :create-group-panel"/>
+                                            </h:commandLink>
+
+                                            <h:commandLink value="Edit" 
+                                                           action="#{adminGroupBean.prepareEdit(g)}"
+                                                           styleClass="btn btn-sm btn-select"
+                                                           style="margin-right: 6px; text-decoration: none; display: inline-flex; width:auto;">
+                                                <f:ajax execute="@form" render=":create-group-panel"/>
+                                            </h:commandLink>
+
+                                            <h:commandLink value="Delete" 
+                                                           action="#{adminGroupBean.deleteGroup(g.id)}"
+                                                           onclick="return confirm('Are you sure you want to delete this pool?');"
+                                                           styleClass="btn btn-sm btn-danger"
+                                                           style="text-decoration: none; display: inline-flex; width:auto;">
+                                                <f:ajax execute="@form" render="@form :create-group-panel"/>
+                                            </h:commandLink>
+                                        </td>
+                                    </tr>
+                                </ui:repeat>
+                            </tbody>
+                        </table>
+                    </div>
                 </h:panelGroup>
             </h:form>
         </div>

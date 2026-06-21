@@ -1,4 +1,3 @@
-<!-- DEPRECATED: Replaced by Active Directory integration -->
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
         "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -7,7 +6,25 @@
       xmlns:f="http://xmlns.jcp.org/jsf/core">
 
 <h:head>
-    <title>World Cup Predictor - Register</title>
+    <!-- ── Theme flash prevention: read localStorage before CSS loads ── -->
+    <script type="text/javascript">
+    //<![CDATA[
+    (function() {
+        var theme = localStorage.getItem('wcPredictor_theme');
+        if (theme === 'light') {
+            document.documentElement.setAttribute('data-theme', 'light');
+        } else {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            if (!theme) {
+                localStorage.setItem('wcPredictor_theme', 'dark');
+            }
+        }
+    })();
+    //]]>
+    </script>
+
+    <title>Register - World Cup Predictor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <link rel="stylesheet" type="text/css" href="#{request.contextPath}/resources/css/styles.css"/>
     <style>
         body {
@@ -15,171 +32,136 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: url('#{request.contextPath}/resources/images/login_background.png') no-repeat center center fixed;
+            background-size: cover;
+            font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+            color: var(--text-primary);
+            padding: var(--space-md);
         }
 
-        .register-container {
-            background: white;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        .login-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(11, 14, 59, 0.4);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .register-card {
             width: 100%;
             max-width: 450px;
-        }
-
-        .register-header {
+            border-radius: var(--radius-lg);
+            padding: var(--space-xl) var(--space-lg);
             text-align: center;
-            margin-bottom: 30px;
+            z-index: 10;
         }
 
-        .register-header h1 {
-            margin: 0 0 10px 0;
-            color: #333;
-            font-size: 28px;
+        .register-title {
+            font-size: 1.65em;
+            font-weight: 700;
+            margin-bottom: var(--space-2xs);
+            color: var(--text-primary);
+            letter-spacing: -0.3px;
         }
 
-        .register-header p {
-            color: #666;
-            margin: 0;
-            font-size: 14px;
+        .register-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.9em;
+            margin-bottom: var(--space-lg);
         }
 
-        .form-group {
-            margin-bottom: 20px;
+        .info-card {
+            background: rgba(58, 134, 255, 0.1);
+            border: 1px solid rgba(58, 134, 255, 0.25);
+            border-left: 4px solid var(--accent-blue);
+            padding: var(--space-md);
+            margin-bottom: var(--space-xl);
+            border-radius: var(--radius-sm);
+            font-size: 0.92em;
+            color: var(--text-secondary);
+            text-align: left;
+            line-height: 1.6;
         }
 
-        .form-group label {
+        .info-card strong {
+            color: var(--text-primary);
+            font-size: 1.05em;
             display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 600;
-            font-size: 14px;
+            margin-bottom: var(--space-2xs);
         }
 
-        .form-group input {
+        .return-btn {
             width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 14px;
-            box-sizing: border-box;
-            transition: border-color 0.3s;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .info-box {
-            background-color: #f0f4ff;
-            border-left: 4px solid #667eea;
-            padding: 12px;
-            margin-bottom: 20px;
-            border-radius: 4px;
-            font-size: 13px;
-            color: #666;
-        }
-
-        .info-box strong {
-            color: #333;
-        }
-
-        .register-button {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            padding: 14px;
+            background: var(--accent-blue);
+            color: var(--text-on-accent);
             border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: 600;
+            border-radius: var(--radius-sm);
+            font-size: 1em;
+            font-weight: 700;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            box-shadow: var(--shadow-sm);
         }
 
-        .register-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        .register-button:active {
-            transform: translateY(0);
-        }
-
-        .message {
-            margin-bottom: 20px;
-            padding: 12px;
-            border-radius: 6px;
-            font-size: 14px;
-            text-align: center;
-        }
-
-        .message.error {
-            background-color: #fee;
-            color: #c33;
-            border: 1px solid #fcc;
-        }
-
-        .message.success {
-            background-color: #efe;
-            color: #3c3;
-            border: 1px solid #cfc;
+        .return-btn:hover {
+            transform: translateY(-1px);
+            background: var(--accent-blue-hover);
+            box-shadow: var(--shadow-hover);
         }
 
         .register-footer {
-            text-align: center;
-            margin-top: 20px;
-            font-size: 14px;
-            color: #666;
+            margin-top: var(--space-xl);
+            font-size: 0.88em;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border-color);
+            padding-top: var(--space-md);
         }
 
         .register-footer a {
-            color: #667eea;
+            color: var(--accent-blue);
             text-decoration: none;
-            font-weight: 600;
+            font-weight: 700;
         }
-
         .register-footer a:hover {
+            color: var(--accent-blue-hover);
             text-decoration: underline;
-        }
-
-        .password-requirements {
-            font-size: 12px;
-            color: #999;
-            margin-top: 5px;
-            line-height: 1.5;
         }
     </style>
 </h:head>
 
 <h:body>
-    <div class="register-container">
+    <div class="login-overlay"></div>
+
+    <div class="register-card glass-panel">
+        
+        <!-- Header -->
         <div class="register-header">
-            <h1>⚽ World Cup Predictor</h1>
-            <p>Create New Account</p>
+            <h1 class="register-title">Create Account</h1>
+            <p class="register-subtitle">Join the prediction tournament</p>
         </div>
 
         <h:form id="registerForm">
-            <!-- Info box -->
-            <div class="info-box">
-                <strong>📋 Registration Disabled:</strong><br/>
-                Registration is now handled via Active Directory. 
-                Please contact an administrator to be added to the Whitelist.
+            <!-- AD Restriction Info Box -->
+            <div class="info-card">
+                <strong>📋 Corporate Access Policy</strong>
+                Self-registration is currently disabled. User authentication is managed securely via QNB Active Directory Federation Services.
+                <br/><br/>
+                Please contact a system administrator to request system access or to whitelist your AD username (sAMAccountName).
             </div>
             
-            <div style="text-align: center; margin-top: 20px;">
-                <h:link outcome="/login" value="Return to Login" styleClass="register-button" style="display:inline-block; text-decoration:none; text-align:center; box-sizing:border-box;"/>
-            </div>
+            <!-- Return button -->
+            <h:link outcome="/login" value="← Return to Login" styleClass="return-btn"/>
         </h:form>
 
-        <!-- Footer with login link -->
+        <!-- Footer -->
         <div class="register-footer">
-            <p>Already have an account? <h:link value="Login here" outcome="/login"/></p>
+            <p>Already authorized? <h:link value="Login here" outcome="/login"/></p>
         </div>
     </div>
 </h:body>
-
 </html>

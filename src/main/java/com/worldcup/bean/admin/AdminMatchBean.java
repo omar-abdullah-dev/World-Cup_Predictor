@@ -86,6 +86,21 @@ public class AdminMatchBean implements Serializable {
         }
     }
 
+    public void deleteMatch(Long matchId) {
+        try {
+            matchService.deleteMatch(authBean.getUser(), matchId);
+            String username = authBean.getUser().getUsername();
+            activityLogService.log("DEL",
+                    "DEL | screen=admin-matches.xhtml | user=" + username
+                            + " | detail=Match deleted: ID " + matchId,
+                    username);
+            addMessage(FacesMessage.SEVERITY_INFO, "Match deleted successfully");
+            loadMatches();
+        } catch (Exception e) {
+            addMessage(FacesMessage.SEVERITY_ERROR, e.getMessage());
+        }
+    }
+
     public void forceSubmitResult(Long matchId) {
         if (matchId == null) {
             addMessage(FacesMessage.SEVERITY_ERROR, "Invalid match selection.");
@@ -201,5 +216,7 @@ public class AdminMatchBean implements Serializable {
 
         public Long  getMatchId() { return match.getId(); }
         public Match getMatch()   { return match; }
+        public boolean isDeletable() { return !match.hasStarted() && !match.isFinished(); }
+        public boolean isFinished() { return match.isFinished(); }
     }
 }

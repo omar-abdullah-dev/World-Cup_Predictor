@@ -10,11 +10,13 @@
     <ui:define name="title">Leaderboard - World Cup Predictor</ui:define>
 
     <ui:define name="content">
+        <!-- Page Header -->
         <div class="page-header">
-            <h2>&#127942; Leaderboard</h2>
-            <p>Current standings in the World Cup prediction competition</p>
+            <h2>🏆 Leaderboard</h2>
+            <p>Track current standings and see who is dominating the World Cup prediction challenge.</p>
         </div>
 
+        <!-- Visual Podium for Top 3 -->
         <h:panelGroup rendered="#{leaderboardBean.podium.size() > 0}" layout="block">
             <div class="podium-container">
                 <ui:repeat value="#{leaderboardBean.podium}" var="user" varStatus="status">
@@ -29,36 +31,43 @@
                             <h:outputText value="#{user.username}"/>
                         </div>
                         <div class="podium-points">
-                            <h:outputText value="#{user.totalPoints}"/> pts
+                            <h:outputText value="#{user.totalPoints}"/> PTS
                         </div>
                     </div>
                 </ui:repeat>
             </div>
         </h:panelGroup>
 
+        <!-- Full Rankings Table -->
         <div class="card">
-            <h3>&#128202; Full Rankings (#{leaderboardBean.totalParticipants} participants)</h3>
+            <h3>📊 Full Standings <span style="font-weight: normal; font-size: 0.85em; color: var(--text-muted); margin-left: var(--space-xs);">(#{leaderboardBean.totalParticipants} participants)</span></h3>
+            
             <h:panelGroup rendered="#{empty leaderboardBean.leaderboard}">
-                <p class="empty-state">No users yet.</p>
+                <div class="empty-state">
+                    <p>No active participants registered in the tournament yet.</p>
+                </div>
             </h:panelGroup>
+            
             <h:panelGroup rendered="#{not empty leaderboardBean.leaderboard}">
-                <h:dataTable value="#{leaderboardBean.leaderboard}" var="user" rowIndexVar="rank"
-                             styleClass="data-table">
-                    <h:column>
-                        <f:facet name="header">Rank</f:facet>
-                        <span class="leaderboard-rank #{rank == 0 ? 'rank-1' : rank == 1 ? 'rank-2' : rank == 2 ? 'rank-3' : 'rank-default'}">
-                            <h:outputText value="#{rank + 1}"/>
-                        </span>
-                    </h:column>
-                    <h:column>
-                        <f:facet name="header">Username</f:facet>
-                        <strong><h:outputText value="#{user.username}"/></strong>
-                    </h:column>
-                    <h:column>
-                        <f:facet name="header">Total Points</f:facet>
-                        <span class="points-badge"><h:outputText value="#{user.totalPoints}"/></span>
-                    </h:column>
-                </h:dataTable>
+                <div class="table-responsive">
+                    <h:dataTable value="#{leaderboardBean.leaderboard}" var="user" rowIndexVar="rank"
+                                 styleClass="data-table">
+                        <h:column>
+                            <f:facet name="header">Rank</f:facet>
+                            <span class="leaderboard-rank #{rank == 0 ? 'rank-1' : rank == 1 ? 'rank-2' : rank == 2 ? 'rank-3' : 'rank-default'}">
+                                <h:outputText value="#{rank + 1}"/>
+                            </span>
+                        </h:column>
+                        <h:column>
+                            <f:facet name="header">Competitor</f:facet>
+                            <span style="font-weight: 700; color: #FFFFFF;"><h:outputText value="#{user.username}"/></span>
+                        </h:column>
+                        <h:column>
+                            <f:facet name="header">Total Points</f:facet>
+                            <span class="points-badge points-exact"><h:outputText value="#{user.totalPoints}"/> PTS</span>
+                        </h:column>
+                    </h:dataTable>
+                </div>
             </h:panelGroup>
         </div>
     </ui:define>

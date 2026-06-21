@@ -6,17 +6,18 @@
       xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
       xmlns:f="http://xmlns.jcp.org/jsf/core">
 <h:head>
-    <!-- ── Theme flash prevention: read cookie before CSS loads ── -->
+    <!-- ── Theme flash prevention: read localStorage before CSS loads ── -->
     <script type="text/javascript">
     //<![CDATA[
     (function() {
-        function getCookie(name) {
-            var v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
-            return v ? v.pop() : null;
-        }
-        var theme = getCookie('wcPredictor_theme');
-        if (theme === 'dark') {
+        var theme = localStorage.getItem('wcPredictor_theme');
+        if (theme === 'light') {
+            document.documentElement.setAttribute('data-theme', 'light');
+        } else {
             document.documentElement.setAttribute('data-theme', 'dark');
+            if (!theme) {
+                localStorage.setItem('wcPredictor_theme', 'dark');
+            }
         }
     })();
     //]]>
@@ -37,50 +38,50 @@
         <div class="header-inner">
 
             <!-- Left: logo + title -->
-            <div class="header-brand">
-                <span class="header-logo">&#9917;</span>
-                <span class="header-title">World Cup Predictor</span>
-            </div>
+            <h:link outcome="index" styleClass="header-brand">
+                <span class="header-logo">🏆</span>
+                <span class="header-title">World Cup 2026 <span style="font-weight: 300; font-size: 0.85em; opacity: 0.75;">× QNB Life</span></span>
+            </h:link>
 
             <!-- Center: nav links -->
             <input type="checkbox" id="nav-toggle" class="nav-toggle"/>
             <label for="nav-toggle" class="nav-toggle-label" title="Toggle navigation">&#9776;</label>
 
             <nav class="app-nav">
-                <h:link outcome="index" value="Dashboard"
+                <h:link outcome="index" value="📊 Dashboard"
                         styleClass="nav-link#{navBean.isActive('index') ? ' active' : ''}"/>
-                <h:link outcome="groups" value="Groups"
+                <h:link outcome="groups" value="🌍 Groups"
                         styleClass="nav-link#{navBean.isActive('groups') ? ' active' : ''}"/>
-                <h:link outcome="matches" value="Matches"
+                <h:link outcome="matches" value="📅 Matches"
                         styleClass="nav-link#{navBean.isActive('matches') ? ' active' : ''}"/>
-                <h:link outcome="predictions" value="Predictions"
+                <h:link outcome="predictions" value="🎯 Predictions"
                         styleClass="nav-link#{navBean.isActive('predictions') ? ' active' : ''}"/>
-                <h:link outcome="leaderboard" value="Leaderboard"
+                <h:link outcome="leaderboard" value="🏆 Leaderboard"
                         styleClass="nav-link#{navBean.isActive('leaderboard') ? ' active' : ''}"/>
                 <h:panelGroup rendered="#{authBean.admin}" layout="inline">
-                    <h:link outcome="users" value="Users"
+                    <h:link outcome="users" value="👥 Users"
                             styleClass="nav-link#{navBean.isActive('users') ? ' active' : ''}"/>
-                    <h:link outcome="admin-whitelist" value="Whitelist"
+                    <h:link outcome="admin-whitelist" value="📝 Whitelist"
                             styleClass="nav-link#{navBean.isActive('admin-whitelist') ? ' active' : ''}"/>
-                    <h:link outcome="admin-rounds" value="Rounds"
+                    <h:link outcome="admin-rounds" value="🔄 Rounds"
                             styleClass="nav-link#{navBean.isActive('admin-rounds') ? ' active' : ''}"/>
-                    <h:link outcome="admin-groups" value="Groups Admin"
+                    <h:link outcome="admin-groups" value="🛠️ Groups Admin"
                             styleClass="nav-link#{navBean.isActive('admin-groups') ? ' active' : ''}"/>
-                    <h:link outcome="admin-matches" value="Matches Admin"
+                    <h:link outcome="admin-matches" value="⚙️ Matches Admin"
                             styleClass="nav-link#{navBean.isActive('admin-matches') ? ' active' : ''}"/>
-                    <h:link outcome="admin-audit" value="&#128274; Audit"
+                    <h:link outcome="admin-audit" value="🔒 Audit"
                             styleClass="nav-link#{navBean.isActive('admin-audit') ? ' active' : ''}"/>
                 </h:panelGroup>
             </nav>
 
             <!-- Right: theme toggle + user chip + logout -->
             <div class="header-right">
-                <button id="themeToggle" class="theme-toggle-btn" title="Toggle dark mode"
+                <button id="themeToggle" class="theme-toggle-btn" title="Toggle theme"
                         onclick="toggleTheme()">&#127769;</button>
 
                 <h:panelGroup rendered="#{authBean.loggedIn}" layout="inline">
                     <span class="user-chip">
-                        <span class="user-chip-icon">&#128100;</span>
+                        <span class="user-chip-icon">👤</span>
                         <span class="user-chip-name">
                             <h:outputText value="#{authBean.currentUsername}"/>
                         </span>
@@ -92,7 +93,7 @@
                     </h:form>
                 </h:panelGroup>
                 <h:panelGroup rendered="#{not authBean.loggedIn}" layout="inline">
-                    <h:link outcome="login" value="Login" styleClass="nav-link"/>
+                    <h:link outcome="login" value="🔓 Login" styleClass="nav-link"/>
                 </h:panelGroup>
             </div>
 
@@ -107,7 +108,7 @@
     </main>
 
     <footer class="app-footer">
-        <p>World Cup Predictor &#8212; QNB Group</p>
+        <p>© 2026 World Cup Prediction Platform powered by QNB Life. All rights reserved.</p>
     </footer>
 </div>
 
@@ -131,24 +132,14 @@ function toggleTheme() {
     var btn  = document.getElementById('themeToggle');
     var isDark = html.getAttribute('data-theme') === 'dark';
     if (isDark) {
-        html.removeAttribute('data-theme');
-        if (btn) btn.innerHTML = '&#127769;';
-        setCookie('wcPredictor_theme', 'light', 365);
+        html.setAttribute('data-theme', 'light');
+        if (btn) btn.innerHTML = '&#127769;'; // Moon: click to switch to dark
+        localStorage.setItem('wcPredictor_theme', 'light');
     } else {
         html.setAttribute('data-theme', 'dark');
-        if (btn) btn.innerHTML = '&#9728;&#65039;';
-        setCookie('wcPredictor_theme', 'dark', 365);
+        if (btn) btn.innerHTML = '&#9728;&#65039;'; // Sun: click to switch to light
+        localStorage.setItem('wcPredictor_theme', 'dark');
     }
-}
-
-function setCookie(name, value, days) {
-    var expires = '';
-    if (days) {
-        var d = new Date();
-        d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
-        expires = '; expires=' + d.toUTCString();
-    }
-    document.cookie = name + '=' + value + expires + '; path=/';
 }
 
 // Sync toggle icon with current theme on load
@@ -157,6 +148,8 @@ function setCookie(name, value, days) {
     if (!btn) return;
     if (document.documentElement.getAttribute('data-theme') === 'dark') {
         btn.innerHTML = '&#9728;&#65039;';
+    } else {
+        btn.innerHTML = '&#127769;';
     }
 })();
 

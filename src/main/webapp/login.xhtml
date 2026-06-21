@@ -6,7 +6,25 @@
       xmlns:f="http://xmlns.jcp.org/jsf/core">
 
 <h:head>
-    <title>World Cup Predictor - Login</title>
+    <!-- ── Theme flash prevention: read localStorage before CSS loads ── -->
+    <script type="text/javascript">
+    //<![CDATA[
+    (function() {
+        var theme = localStorage.getItem('wcPredictor_theme');
+        if (theme === 'light') {
+            document.documentElement.setAttribute('data-theme', 'light');
+        } else {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            if (!theme) {
+                localStorage.setItem('wcPredictor_theme', 'dark');
+            }
+        }
+    })();
+    //]]>
+    </script>
+
+    <title>Sign In - World Cup Predictor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <link rel="stylesheet" type="text/css" href="#{request.contextPath}/resources/css/styles.css"/>
     <style>
         body {
@@ -14,177 +32,336 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: url('#{request.contextPath}/resources/images/login_background.png') no-repeat center center fixed;
+            background-size: cover;
+            font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+            color: var(--text-primary);
+            padding: var(--space-md);
+            transition: color var(--transition);
         }
 
-        .login-container {
-            background: white;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        /* Overlay to improve contrast in Light/Dark theme over background image */
+        .login-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(11, 14, 59, 0.4);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .login-card {
             width: 100%;
-            max-width: 400px;
-        }
-
-        .login-header {
+            max-width: 440px;
+            border-radius: var(--radius-lg);
+            padding: var(--space-xl) var(--space-lg);
             text-align: center;
-            margin-bottom: 30px;
+            z-index: 10;
         }
 
-        .login-header h1 {
-            margin: 0 0 10px 0;
-            color: #333;
-            font-size: 28px;
+        .login-title {
+            font-size: 1.65em;
+            font-weight: 700;
+            margin-bottom: var(--space-2xs);
+            color: var(--text-primary);
+            letter-spacing: -0.3px;
         }
 
-        .login-header p {
-            color: #666;
-            margin: 0;
-            font-size: 14px;
+        .login-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.9em;
+            margin-bottom: var(--space-lg);
         }
 
-        .form-group {
-            margin-bottom: 20px;
+        .flags-row {
+            display: flex;
+            justify-content: center;
+            gap: var(--space-md);
+            margin-bottom: var(--space-lg);
         }
 
-        .form-group label {
+        .flag-emblem {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 2px solid var(--border-card);
+            box-shadow: var(--shadow-sm);
+            background: #FFFFFF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+        .flag-emblem:hover {
+            transform: scale(1.1);
+            border-color: var(--accent-blue);
+        }
+
+        /* Form Controls */
+        .input-wrapper {
+            position: relative;
+            margin-bottom: var(--space-md);
+            text-align: left;
+        }
+
+        .input-wrapper label {
             display: block;
-            margin-bottom: 8px;
-            color: #333;
+            font-size: 0.85em;
             font-weight: 600;
-            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
         }
 
-        .form-group input {
+        .input-inner {
+            position: relative;
+        }
+
+        .input-icon-left {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 1em;
+            pointer-events: none;
+        }
+
+        .login-input {
             width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 14px;
-            box-sizing: border-box;
-            transition: border-color 0.3s;
+            padding: 12px 14px 12px 42px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            font-size: 0.95em;
+            background: var(--bg-input);
+            color: var(--text-primary);
+            transition: var(--transition);
+            font-family: inherit;
         }
 
-        .form-group input:focus {
+        .login-input:focus {
+            border-color: var(--accent-blue);
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            box-shadow: 0 0 0 3px rgba(58, 134, 255, 0.25);
         }
 
-        .login-button {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: 600;
+        /* Password input specific spacing on right for toggle */
+        .login-input-pwd {
+            padding-right: 42px;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            font-size: 1.1em;
+            user-select: none;
+            transition: var(--transition);
+        }
+        .password-toggle:hover {
+            color: var(--text-primary);
         }
 
-        .login-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        .form-options {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85em;
+            margin-bottom: var(--space-lg);
         }
 
-        .login-button:active {
-            transform: translateY(0);
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            color: var(--text-secondary);
         }
 
-        .message {
-            margin-bottom: 20px;
-            padding: 12px;
-            border-radius: 6px;
-            font-size: 14px;
-            text-align: center;
+        .remember-me input {
+            cursor: pointer;
+            accent-color: var(--accent-blue);
         }
 
-        .message.error {
-            background-color: #fee;
-            color: #c33;
-            border: 1px solid #fcc;
-        }
-
-        .message.success {
-            background-color: #efe;
-            color: #3c3;
-            border: 1px solid #cfc;
-        }
-
-        .login-footer {
-            text-align: center;
-            margin-top: 20px;
-            font-size: 14px;
-            color: #666;
-        }
-
-        .login-footer a {
-            color: #667eea;
+        .forgot-link {
+            color: var(--accent-blue);
             text-decoration: none;
             font-weight: 600;
         }
-
-        .login-footer a:hover {
+        .forgot-link:hover {
+            color: var(--accent-blue-hover);
             text-decoration: underline;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--accent-blue);
+            color: var(--text-on-accent);
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-xs);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .login-btn:hover {
+            transform: translateY(-1px);
+            background: var(--accent-blue-hover);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .qnb-disclaimer {
+            font-size: 0.76em;
+            color: var(--text-muted);
+            margin-top: var(--space-lg);
+            line-height: 1.5;
+            padding-top: var(--space-md);
+            border-top: 1px solid var(--border-color);
         }
     </style>
 </h:head>
 
 <h:body>
-    <div class="login-container">
+    <div class="login-overlay"></div>
+
+    <div class="login-card glass-panel">
+        
+        <!-- Header -->
         <div class="login-header">
-            <h1>⚽ World Cup Predictor</h1>
-            <p>Secure Login</p>
+            <h1 class="login-title">Welcome Back 🎉</h1>
+            <p class="login-subtitle">Sign in to continue your World Cup 2026™ journey</p>
+        </div>
+
+        <!-- Flags Row -->
+        <div class="flags-row">
+            <!-- USA Flag -->
+            <div class="flag-emblem" title="United States">
+                <svg width="28" height="28" viewBox="0 0 500 500">
+                    <circle cx="250" cy="250" r="250" fill="#3C3B6E"/>
+                    <path d="M 0,250 A 250,250 0 0,0 500,250 Z" fill="#B22234"/>
+                    <path d="M 0,250 A 250,250 0 0,0 472,330 H 28 Z" fill="#FFFFFF"/>
+                    <path d="M 0,250 A 250,250 0 0,0 410,410 H 90 Z" fill="#B22234"/>
+                    <path d="M 0,250 A 250,250 0 0,0 300,480 H 200 Z" fill="#FFFFFF"/>
+                    <path d="M 0,250 A 250,250 0 0,0 250,500 Z" fill="#B22234"/>
+                    <path d="M 0,250 A 250,250 0 0,1 250,0 A 250,250 0 0,1 500,250 H 250 Z" fill="#FFFFFF"/>
+                    <path d="M 0,250 A 250,250 0 0,1 120,62 L 120,250 Z" fill="#3C3B6E"/>
+                    <path d="M 120,250 H 500 L 493,212 H 120 Z" fill="#B22234"/>
+                    <path d="M 120,172 H 472 L 452,134 H 120 Z" fill="#B22234"/>
+                    <path d="M 120,96 H 410 L 390,58 H 120 Z" fill="#B22234"/>
+                    <text x="30" y="140" fill="#FFFFFF" font-size="28" font-family="sans-serif">★</text>
+                    <text x="70" y="180" fill="#FFFFFF" font-size="28" font-family="sans-serif">★</text>
+                    <text x="40" y="220" fill="#FFFFFF" font-size="28" font-family="sans-serif">★</text>
+                </svg>
+            </div>
+            <!-- Canada Flag -->
+            <div class="flag-emblem" title="Canada">
+                <svg width="28" height="28" viewBox="0 0 500 500">
+                    <circle cx="250" cy="250" r="250" fill="#D80621"/>
+                    <path d="M 125,48 A 250,250 0 0,1 375,48 L 375,452 A 250,250 0 0,1 125,452 Z" fill="#FFFFFF"/>
+                    <path d="M 250,140 L 265,185 L 305,175 L 290,210 L 320,230 L 285,250 L 295,290 L 255,275 L 250,330 L 245,275 L 205,290 L 215,250 L 180,230 L 210,210 L 195,175 L 235,185 Z" fill="#D80621"/>
+                </svg>
+            </div>
+            <!-- Mexico Flag -->
+            <div class="flag-emblem" title="Mexico">
+                <svg width="28" height="28" viewBox="0 0 500 500">
+                    <circle cx="250" cy="250" r="250" fill="#006847"/>
+                    <path d="M 166,22 A 250,250 0 0,1 500,250 A 250,250 0 0,1 166,478 Z" fill="#C8102E"/>
+                    <path d="M 166,22 A 250,250 0 0,1 334,22 L 334,478 A 250,250 0 0,1 166,478 Z" fill="#FFFFFF"/>
+                    <circle cx="250" cy="250" r="28" fill="#8B5A2B"/>
+                    <path d="M 235,275 C 235,295 265,295 265,275" stroke="#006847" stroke-width="6" fill="none"/>
+                </svg>
+            </div>
         </div>
 
         <h:form id="loginForm">
-            <!-- Error message -->
+            <!-- Messages panel -->
             <h:panelGroup rendered="#{not empty authBean.errorMessage}">
-                <div class="message error">
+                <div class="message-error">
+                    <span style="font-size:1.1em;">⚠️</span>
                     <h:outputText value="#{authBean.errorMessage}"/>
                 </div>
             </h:panelGroup>
 
-            <!-- Success message -->
             <h:panelGroup rendered="#{not empty authBean.successMessage}">
-                <div class="message success">
+                <div class="message-success">
+                    <span style="font-size:1.1em;">✓</span>
                     <h:outputText value="#{authBean.successMessage}"/>
                 </div>
             </h:panelGroup>
 
-            <!-- Username field -->
-            <div class="form-group">
-                <h:outputLabel for="username" value="Username"/>
-                <h:inputText id="username" 
-                             value="#{authBean.username}" 
-                             required="true"
-                             placeholder="Enter your username"/>
+            <!-- Username Input -->
+            <div class="input-wrapper">
+                <h:outputLabel for="username" value="Email or Username"/>
+                <div class="input-inner">
+                    <span class="input-icon-left">👤</span>
+                    <h:inputText id="username" 
+                                 value="#{authBean.username}" 
+                                 required="true"
+                                 requiredMessage="Email or Username is required"
+                                 styleClass="login-input"
+                                 placeholder="Enter your email or username"/>
+                </div>
             </div>
 
-            <!-- Password field -->
-            <div class="form-group">
+            <!-- Password Input -->
+            <div class="input-wrapper">
                 <h:outputLabel for="password" value="Password"/>
-                <h:inputSecret id="password" 
-                              value="#{authBean.password}" 
-                              required="true"
-                              placeholder="Enter your password"/>
+                <div class="input-inner">
+                    <span class="input-icon-left">🔒</span>
+                    <h:inputSecret id="password" 
+                                  value="#{authBean.password}" 
+                                  required="true"
+                                  requiredMessage="Password is required"
+                                  styleClass="login-input login-input-pwd"
+                                  placeholder="Enter your password"/>
+                    <span class="password-toggle" onclick="togglePasswordVisibility()">👁️</span>
+                </div>
             </div>
 
-            <!-- Login button -->
-            <h:commandButton value="🔓 Login" 
+            <!-- Options -->
+            <div class="form-options">
+                <label class="remember-me">
+                    <input type="checkbox" name="remember-me" checked="checked"/>
+                    <span>Remember me</span>
+                </label>
+                <a href="#" class="forgot-link" onclick="alert('Please contact your corporate Active Directory administrator to manage your login credentials.'); return false;">Forgot password?</a>
+            </div>
+
+            <!-- Sign In button -->
+            <h:commandButton value="Sign In →" 
                             action="#{authBean.login()}"
-                            styleClass="login-button"/>
+                            styleClass="login-btn"/>
         </h:form>
 
-        <!-- Footer -->
-        <div class="login-footer">
-            <p><small>&#128274; Use your QNB corporate account (e.g. name@QNB.COM.EG)</small></p>
-            <p><small>Contact an administrator if you need system access</small></p>
+        <!-- QNB Corporate Disclaimer -->
+        <div class="qnb-disclaimer">
+            <p>🔒 Secured by QNB Active Directory Federation Services.</p>
+            <p>Access is restricted to authorized employees. All activity is monitored.</p>
         </div>
     </div>
-</h:body>
 
+    <!-- Password visibility toggle script -->
+    <script type="text/javascript">
+        function togglePasswordVisibility() {
+            var pwdField = document.getElementById('loginForm:password');
+            var toggleIcon = document.querySelector('.password-toggle');
+            if (pwdField.type === 'password') {
+                pwdField.type = 'text';
+                toggleIcon.innerHTML = '🙈';
+            } else {
+                pwdField.type = 'password';
+                toggleIcon.innerHTML = '👁️';
+            }
+        }
+    </script>
+</h:body>
 </html>

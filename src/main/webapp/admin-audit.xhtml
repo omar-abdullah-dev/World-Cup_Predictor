@@ -1,173 +1,188 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
         "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"
-      xmlns:h="http://xmlns.jcp.org/jsf/html"
-      xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
-      xmlns:f="http://xmlns.jcp.org/jsf/core">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="http://xmlns.jcp.org/jsf/html"
+                xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
+                xmlns:f="http://xmlns.jcp.org/jsf/core"
+                template="/templates/layout.xhtml">
 
-<ui:composition template="/templates/layout.xhtml">
-    <ui:define name="title">Session Monitor &amp; Audit Log</ui:define>
+    <ui:define name="title">Session Monitor &amp; Audit Log - World Cup Predictor</ui:define>
 
     <ui:define name="content">
+        <!-- Page Header -->
         <div class="page-header">
-            <h2>&#128274; Session Monitor &amp; Activity Audit</h2>
-            <p>Live session tracking, login history, and full prediction audit trail.</p>
+            <h2>🔒 Security &amp; Activity Audit Command Center</h2>
+            <p>Admin Control: Live session monitoring, access auditing, and database operation tracing.</p>
         </div>
 
         <!-- SECTION 1 — Active Sessions -->
         <div class="admin-section">
-            <h3>&#9654; Active Sessions
-                <span class="badge badge-active">#{adminAuditBean.activeSessionCount} online</span>
+            <h3>👥 Active Sessions
+                <span class="badge badge-active" style="margin-left: var(--space-xs);">#{adminAuditBean.activeSessionCount} online</span>
             </h3>
 
-            <h:form id="sessForm">
-                <h:dataTable value="#{adminAuditBean.activeSessions}" var="s"
-                             styleClass="data-table" headerClass="table-header"
-                             rowClasses="table-row-even,table-row-odd">
-
-                    <h:column>
-                        <f:facet name="header">User</f:facet>
-                        <h:outputText value="#{s.username}"/>
-                    </h:column>
-                    <h:column>
-                        <f:facet name="header">IP Address</f:facet>
-                        <h:outputText value="#{s.ipAddress}"/>
-                    </h:column>
-                    <h:column>
-                        <f:facet name="header">Login Time</f:facet>
-                        <h:outputText value="#{adminAuditBean.formatDateTime(s.loginTime)}"/>
-                    </h:column>
-                    <h:column>
-                        <f:facet name="header">Last Activity</f:facet>
-                        <h:outputText value="#{adminAuditBean.formatDateTime(s.lastActivityTime)}"/>
-                    </h:column>
-                    <h:column>
-                        <f:facet name="header">Browser</f:facet>
-                        <h:outputText value="#{s.userAgent != null ? s.userAgent.substring(0, s.userAgent.length() > 60 ? 60 : s.userAgent.length()) : '-'}"/>
-                    </h:column>
-                    <h:column>
-                        <f:facet name="header">Action</f:facet>
-                        <h:commandButton value="Terminate"
-                                         styleClass="btn btn-danger btn-sm"
-                                         action="#{adminAuditBean.terminateSession(s.id)}"
-                                         onclick="return confirm('Terminate session?')"/>
-                    </h:column>
-                </h:dataTable>
-
+            <h:form id="sessForm" style="margin:0; padding:0;">
                 <h:panelGroup rendered="#{empty adminAuditBean.activeSessions}" layout="block"
-                              styleClass="empty-state">
-                    <p>No active sessions at this time.</p>
+                              styleClass="card empty-state">
+                    <p>No active user sessions currently monitored.</p>
+                </h:panelGroup>
+
+                <h:panelGroup rendered="#{not empty adminAuditBean.activeSessions}">
+                    <div class="table-responsive">
+                        <h:dataTable value="#{adminAuditBean.activeSessions}" var="s"
+                                     styleClass="data-table" headerClass="table-header">
+
+                            <h:column>
+                                <f:facet name="header">User</f:facet>
+                                <strong><h:outputText value="#{s.username}"/></strong>
+                            </h:column>
+                            <h:column>
+                                <f:facet name="header">IP Address</f:facet>
+                                <h:outputText value="#{s.ipAddress}"/>
+                            </h:column>
+                            <h:column>
+                                <f:facet name="header">Authentication Time</f:facet>
+                                📅 <h:outputText value="#{adminAuditBean.formatDateTime(s.loginTime)}"/>
+                            </h:column>
+                            <h:column>
+                                <f:facet name="header">Last Active</f:facet>
+                                <h:outputText value="#{adminAuditBean.formatDateTime(s.lastActivityTime)}"/>
+                            </h:column>
+                            <h:column>
+                                <f:facet name="header">Client User Agent</f:facet>
+                                <span style="font-size: 0.82em; color: var(--text-muted);">
+                                    <h:outputText value="#{s.userAgent != null ? s.userAgent.substring(0, s.userAgent.length() > 50 ? 50 : s.userAgent.length()) : '-'}"/>...
+                                </span>
+                            </h:column>
+                            <h:column>
+                                <f:facet name="header">Terminate</f:facet>
+                                <h:commandButton value="Kill Session"
+                                                 styleClass="btn btn-danger btn-sm"
+                                                 action="#{adminAuditBean.terminateSession(s.id)}"
+                                                 onclick="return confirm('Force terminate this session?')"/>
+                            </h:column>
+                        </h:dataTable>
+                    </div>
                 </h:panelGroup>
             </h:form>
         </div>
 
         <!-- SECTION 2 — Session History -->
         <div class="admin-section">
-            <h3>&#128336; Session History (all time)</h3>
-            <h:dataTable value="#{adminAuditBean.allSessions}" var="s"
-                         styleClass="data-table" headerClass="table-header"
-                         rowClasses="table-row-even,table-row-odd">
+            <h3>⏳ Historic Authentication Logs</h3>
+            <div class="table-responsive">
+                <h:dataTable value="#{adminAuditBean.allSessions}" var="s"
+                             styleClass="data-table" headerClass="table-header">
 
-                <h:column>
-                    <f:facet name="header">User</f:facet>
-                    <h:outputText value="#{s.username}"/>
-                </h:column>
-                <h:column>
-                    <f:facet name="header">Status</f:facet>
-                    <span class="badge #{adminAuditBean.sessionStatusBadge(s.status)}">
-                        <h:outputText value="#{s.status}"/>
-                    </span>
-                </h:column>
-                <h:column>
-                    <f:facet name="header">Login Time</f:facet>
-                    <h:outputText value="#{adminAuditBean.formatDateTime(s.loginTime)}"/>
-                </h:column>
-                <h:column>
-                    <f:facet name="header">Logout / End Time</f:facet>
-                    <h:outputText value="#{adminAuditBean.formatDateTime(s.logoutTime)}"/>
-                </h:column>
-                <h:column>
-                    <f:facet name="header">IP</f:facet>
-                    <h:outputText value="#{s.ipAddress}"/>
-                </h:column>
-            </h:dataTable>
+                    <h:column>
+                        <f:facet name="header">User</f:facet>
+                        <strong><h:outputText value="#{s.username}"/></strong>
+                    </h:column>
+                    <h:column>
+                        <f:facet name="header">Session Outcome</f:facet>
+                        <span class="badge #{adminAuditBean.sessionStatusBadge(s.status)}">
+                            <h:outputText value="#{s.status}"/>
+                        </span>
+                    </h:column>
+                    <h:column>
+                        <f:facet name="header">Login Date/Time</f:facet>
+                        📅 <h:outputText value="#{adminAuditBean.formatDateTime(s.loginTime)}"/>
+                    </h:column>
+                    <h:column>
+                        <f:facet name="header">Logout / Session End</f:facet>
+                        <h:outputText value="#{adminAuditBean.formatDateTime(s.logoutTime)}"/>
+                    </h:column>
+                    <h:column>
+                        <f:facet name="header">Logged IP Address</f:facet>
+                        <h:outputText value="#{s.ipAddress}"/>
+                    </h:column>
+                </h:dataTable>
+            </div>
         </div>
 
         <!-- SECTION 3 — Activity Audit Log -->
         <div class="admin-section">
-            <h3>&#128203; Activity Audit Log</h3>
+            <h3>📝 Database Operation Tracing Log</h3>
 
+            <!-- Filters -->
             <h:form id="auditFilterForm" styleClass="filter-form">
                 <div class="filter-row">
-                    <label for="fUser">Username:</label>
-                    <h:inputText id="fUser" value="#{adminAuditBean.filterUsername}"
-                                 styleClass="input-field" placeholder="Filter by user…"/>
+                    <div style="display:inline-flex; align-items:center; gap:var(--space-2xs);">
+                        <label for="fUser">Username:</label>
+                        <h:inputText id="fUser" value="#{adminAuditBean.filterUsername}"
+                                     styleClass="input-field" placeholder="Search user…"/>
+                    </div>
 
-                    <label for="fEvent">Event Type:</label>
-                    <h:selectOneMenu id="fEvent" value="#{adminAuditBean.filterEventType}"
-                                     styleClass="input-field">
-                        <f:selectItems value="#{adminAuditBean.eventTypes}"
-                                       var="et" itemValue="#{et}"
-                                       itemLabel="#{et == '' ? '— All events —' : et}"/>
-                    </h:selectOneMenu>
+                    <div style="display:inline-flex; align-items:center; gap:var(--space-2xs);">
+                        <label for="fEvent">Event Type:</label>
+                        <h:selectOneMenu id="fEvent" value="#{adminAuditBean.filterEventType}"
+                                         styleClass="input-field">
+                            <f:selectItems value="#{adminAuditBean.eventTypes}"
+                                           var="et" itemValue="#{et}"
+                                           itemLabel="#{et == '' ? '— All events —' : et}"/>
+                        </h:selectOneMenu>
+                    </div>
 
-                    <h:commandButton value="Filter" styleClass="btn btn-primary"
-                                     action="#{adminAuditBean.applyFilter}"/>
-                    <h:commandButton value="Clear" styleClass="btn btn-secondary"
-                                     action="#{adminAuditBean.clearFilter}"
-                                     immediate="true"/>
-                    <h:commandButton value="&#8635; Refresh" styleClass="btn btn-secondary"
-                                     action="#{adminAuditBean.refresh}"/>
+                    <div style="display:inline-flex; gap: var(--space-2xs); margin-left: auto;">
+                        <h:commandButton value="🔍 Filter" styleClass="btn btn-primary btn-sm"
+                                         action="#{adminAuditBean.applyFilter}"/>
+                        <h:commandButton value="Clear" styleClass="btn btn-secondary btn-sm"
+                                         action="#{adminAuditBean.clearFilter}"
+                                         immediate="true"/>
+                        <h:commandButton value="🔄 Refresh" styleClass="btn btn-secondary btn-sm"
+                                         action="#{adminAuditBean.refresh}"/>
+                    </div>
                 </div>
             </h:form>
 
-            <h:dataTable value="#{adminAuditBean.auditLogs}" var="log"
-                         styleClass="data-table" headerClass="table-header"
-                         rowClasses="table-row-even,table-row-odd">
-
-                <h:column>
-                    <f:facet name="header">Timestamp</f:facet>
-                    <h:outputText value="#{adminAuditBean.formatDateTime(log.datemaj)}"/>
-                </h:column>
-                <h:column>
-                    <f:facet name="header">Event</f:facet>
-                    <span class="badge #{adminAuditBean.eventBadgeClass(log.opmaj)}">
-                        <h:outputText value="#{log.opmaj}"/>
-                    </span>
-                </h:column>
-                <h:column>
-                    <f:facet name="header">User</f:facet>
-                    <h:outputText value="#{log.profilemaj}"/>
-                </h:column>
-                <h:column>
-                    <f:facet name="header">IP Address</f:facet>
-                    <h:outputText value="#{log.ipAddress != null ? log.ipAddress : '-'}"/>
-                </h:column>
-                <h:column>
-                    <f:facet name="header">Match ID</f:facet>
-                    <h:outputText value="#{log.matchId != null ? log.matchId : '-'}"/>
-                </h:column>
-                <h:column>
-                    <f:facet name="header">Old Value</f:facet>
-                    <h:outputText value="#{log.oldValue != null ? log.oldValue : '-'}"/>
-                </h:column>
-                <h:column>
-                    <f:facet name="header">New Value</f:facet>
-                    <h:outputText value="#{log.newValue != null ? log.newValue : '-'}"/>
-                </h:column>
-                <h:column>
-                    <f:facet name="header">Detail</f:facet>
-                    <h:outputText value="#{log.transmaj}" style="font-size:0.8em; color:#666;"/>
-                </h:column>
-            </h:dataTable>
-
             <h:panelGroup rendered="#{empty adminAuditBean.auditLogs}" layout="block"
-                          styleClass="empty-state">
-                <p>No audit records found matching the current filter.</p>
+                          styleClass="card empty-state">
+                <p>No audit records match the selected trace criteria.</p>
+            </h:panelGroup>
+
+            <h:panelGroup rendered="#{not empty adminAuditBean.auditLogs}">
+                <div class="table-responsive">
+                    <h:dataTable value="#{adminAuditBean.auditLogs}" var="log"
+                                 styleClass="data-table" headerClass="table-header">
+
+                        <h:column>
+                            <f:facet name="header">Timestamp</f:facet>
+                            📅 <h:outputText value="#{adminAuditBean.formatDateTime(log.datemaj)}"/>
+                        </h:column>
+                        <h:column>
+                            <f:facet name="header">Operation</f:facet>
+                            <span class="badge #{adminAuditBean.eventBadgeClass(log.opmaj)}">
+                                <h:outputText value="#{log.opmaj}"/>
+                            </span>
+                        </h:column>
+                        <h:column>
+                            <f:facet name="header">Actor</f:facet>
+                            <strong><h:outputText value="#{log.profilemaj}"/></strong>
+                        </h:column>
+                        <h:column>
+                            <f:facet name="header">IP Address</f:facet>
+                            <h:outputText value="#{log.ipAddress != null ? log.ipAddress : '-'}"/>
+                        </h:column>
+                        <h:column>
+                            <f:facet name="header">Match ID</f:facet>
+                            <span style="font-weight:700; color:var(--accent-blue);"><h:outputText value="#{log.matchId != null ? log.matchId : '-'}"/></span>
+                        </h:column>
+                        <h:column>
+                            <f:facet name="header">Before Value</f:facet>
+                            <h:outputText value="#{log.oldValue != null ? log.oldValue : '-'}"/>
+                        </h:column>
+                        <h:column>
+                            <f:facet name="header">After Value</f:facet>
+                            <h:outputText value="#{log.newValue != null ? log.newValue : '-'}"/>
+                        </h:column>
+                        <h:column>
+                            <f:facet name="header">Operation Summary Description</f:facet>
+                            <h:outputText value="#{log.transmaj}" style="font-size:0.88em; color:var(--text-secondary);"/>
+                        </h:column>
+                    </h:dataTable>
+                </div>
             </h:panelGroup>
         </div>
-
     </ui:define>
 </ui:composition>
-</html>

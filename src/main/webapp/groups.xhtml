@@ -10,20 +10,25 @@
     <ui:define name="title">Groups - World Cup Predictor</ui:define>
 
     <ui:define name="content">
+        <!-- Page Header -->
         <div class="page-header">
-            <h2>&#127750; World Cup Groups</h2>
-            <p>Choose a group to view matches and submit predictions</p>
+            <h2>🌍 Tournament Pools</h2>
+            <p>Select a group to analyze standings, check scheduled fixtures, and submit match predictions.</p>
         </div>
 
         <h:messages globalOnly="true" layout="list" styleClass="faces-messages"/>
 
+        <!-- Pools cards grid -->
         <div class="cards-grid cards-grid-4-col">
             <ui:repeat value="#{groupsBean.groupNames}" var="group">
                 <div class="group-card">
                     <h4><h:outputText value="#{group}"/></h4>
                     <ul class="group-card-teams">
                         <ui:repeat value="#{groupsBean.getTeamsByGroup(group)}" var="team">
-                            <li><h:outputText value="#{team.name}"/></li>
+                            <li>
+                                <span>⚽ <h:outputText value="#{team.name}"/></span>
+                                <span style="font-weight: 700; color: var(--text-muted); font-size: 0.85em;"><h:outputText value="#{team.shortCode}"/></span>
+                            </li>
                         </ui:repeat>
                     </ul>
                     <h:link outcome="group-details" includeViewParams="true" styleClass="group-card-btn">

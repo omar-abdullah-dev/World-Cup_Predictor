@@ -10,26 +10,28 @@
     <ui:define name="title">Round Management - World Cup Predictor</ui:define>
 
     <ui:define name="content">
+        <!-- Page Header -->
         <div class="page-header">
-            <h2>&#127942; Round Management</h2>
-            <p>Configure tournament knockout rounds, open predictions, lock deadlines, and close stages</p>
+            <h2>🔄 Round Management</h2>
+            <p>Admin Control: Initialize tournament rounds, manage schedules, and configure prediction lock deadlines.</p>
         </div>
 
+        <!-- Messages -->
         <h:messages globalOnly="false" layout="list" styleClass="faces-messages"
                     infoClass="message-success" errorClass="message-error"/>
 
-        <!-- Create Round Form (Conditional) -->
+        <!-- Initialize Round Action panel -->
         <h:panelGroup id="create-round-panel">
-            <h:form rendered="#{adminRoundBean.currentRound == null}" styleClass="card" style="text-align: center; padding: 30px;">
+            <h:form rendered="#{adminRoundBean.currentRound == null}" styleClass="card" style="text-align: center; padding: var(--space-xl) var(--space-lg);">
                 <h3>Initialize Tournament Round</h3>
-                <p class="form-hint" style="margin-bottom: 20px;">Ready to set up a new stage of the competition?</p>
-                <h:commandButton value="Add New Round" action="#{adminRoundBean.prepareCreate}" styleClass="btn btn-primary">
+                <p class="form-hint" style="margin-bottom: var(--space-lg);">Set up a new knockout round of the tournament structure.</p>
+                <h:commandButton value="Add New Round" action="#{adminRoundBean.prepareCreate}" styleClass="btn btn-primary" style="display:inline-flex; width:auto;">
                     <f:ajax render=":create-round-panel"/>
                 </h:commandButton>
             </h:form>
 
             <h:form id="round-form" rendered="#{adminRoundBean.currentRound != null}" styleClass="card">
-                <h3>Create New Knockout Round</h3>
+                <h3>🔄 Create New Knockout Round</h3>
                 <div class="form-grid">
                     <div class="form-group">
                         <label for="stage">Tournament Stage</label>
@@ -39,8 +41,7 @@
                         </h:selectOneMenu>
                     </div>
                     <div class="form-group">
-                        <label for="deadline">Prediction Deadline</label>
-                        <!-- Using f:convertDateTime with datetime-local input -->
+                        <label for="deadline">Prediction Lock Deadline</label>
                         <h:inputText id="deadline" value="#{adminRoundBean.currentRound.predictionDeadline}" 
                                      required="true" requiredMessage="Deadline is required"
                                      styleClass="form-input">
@@ -49,9 +50,9 @@
                         </h:inputText>
                     </div>
                 </div>
-                <div class="form-actions" style="margin-top: 15px; display: flex; gap: 10px;">
+                <div class="form-actions" style="display: flex; gap: var(--space-xs); margin-top: var(--space-md);">
                     <h:commandButton value="Save Round" action="#{adminRoundBean.save}" styleClass="btn btn-primary"/>
-                    <h:commandButton value="Cancel" styleClass="btn" style="background: #95a5a6; color: white;" immediate="true">
+                    <h:commandButton value="Cancel" styleClass="btn btn-secondary" immediate="true">
                         <f:setPropertyActionListener target="#{adminRoundBean.currentRound}" value="#{null}"/>
                         <f:ajax render=":create-round-panel"/>
                     </h:commandButton>
@@ -59,67 +60,72 @@
             </h:form>
         </h:panelGroup>
 
-        <!-- Current Rounds Directory -->
+        <!-- Current Rounds Table Card -->
         <div class="card">
-            <h3>Active &amp; Historic Rounds</h3>
-            <h:form id="rounds-table-form">
+            <h3>📊 Active &amp; Historic Rounds <span style="font-weight: normal; font-size: 0.85em; color: var(--text-muted); margin-left: var(--space-xs);">(Total: #{adminRoundBean.rounds.size()})</span></h3>
+            
+            <h:form id="rounds-table-form" style="margin:0; padding:0;">
                 <h:panelGroup rendered="#{empty adminRoundBean.rounds}">
-                    <p class="form-hint">No tournament rounds initialized yet.</p>
+                    <div class="empty-state">
+                        <p>No tournament rounds have been initialized yet.</p>
+                    </div>
                 </h:panelGroup>
 
                 <h:panelGroup rendered="#{not empty adminRoundBean.rounds}">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Stage</th>
-                                <th>Status</th>
-                                <th>Prediction Deadline</th>
-                                <th>Status Control</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <ui:repeat value="#{adminRoundBean.rounds}" var="r">
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
                                 <tr>
-                                    <td><strong><h:outputText value="#{r.stage.displayName}"/></strong></td>
-                                    <td>
-                                        <span class="status-badge #{r.status == 'OPEN' ? 'status-finished' : (r.status == 'LOCKED' ? 'status-closed' : 'status-open')}">
-                                            <h:outputText value="#{r.status}"/>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <h:outputText value="#{r.predictionDeadline}">
-                                            <f:convertDateTime type="localDateTime" pattern="yyyy-MM-dd HH:mm"/>
-                                        </h:outputText>
-                                    </td>
-                                    <td>
-                                        <h:commandLink value="Open Predictions" 
-                                                       action="#{adminRoundBean.setStatus(r.id, 'OPEN')}"
-                                                       rendered="#{r.status != 'OPEN' and r.status != 'CLOSED'}"
-                                                       styleClass="btn btn-sm btn-success"
-                                                       style="margin-right: 8px; text-decoration: none; display: inline-block;">
-                                            <f:ajax execute="@form" render="@form :create-round-panel"/>
-                                        </h:commandLink>
-
-                                        <h:commandLink value="Lock Predictions" 
-                                                       action="#{adminRoundBean.setStatus(r.id, 'LOCKED')}"
-                                                       rendered="#{r.status == 'OPEN'}"
-                                                       styleClass="btn btn-sm btn-select"
-                                                       style="margin-right: 8px; text-decoration: none; display: inline-block; background: #e67e22;">
-                                            <f:ajax execute="@form" render="@form :create-round-panel"/>
-                                        </h:commandLink>
-
-                                        <h:commandLink value="Close Round" 
-                                                       action="#{adminRoundBean.setStatus(r.id, 'CLOSED')}"
-                                                       rendered="#{r.status == 'LOCKED'}"
-                                                       styleClass="btn btn-sm"
-                                                       style="background: #2c3e50; color: white; text-decoration: none; display: inline-block;">
-                                            <f:ajax execute="@form" render="@form :create-round-panel"/>
-                                        </h:commandLink>
-                                    </td>
+                                    <th>Stage Name</th>
+                                    <th>Deadline Lock</th>
+                                    <th>Current State</th>
+                                    <th>State Control</th>
                                 </tr>
-                            </ui:repeat>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <ui:repeat value="#{adminRoundBean.rounds}" var="r">
+                                    <tr>
+                                        <td><strong><h:outputText value="#{r.stage.displayName}"/></strong></td>
+                                        <td>
+                                            📅 <h:outputText value="#{r.predictionDeadline}">
+                                                <f:convertDateTime type="localDateTime" pattern="dd MMM yyyy HH:mm"/>
+                                            </h:outputText>
+                                        </td>
+                                        <td>
+                                            <span class="status-badge #{r.status == 'OPEN' ? 'status-finished' : (r.status == 'LOCKED' ? 'status-closed' : 'status-open')}">
+                                                <h:outputText value="#{r.status}"/>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <h:commandLink value="Open Predictions" 
+                                                           action="#{adminRoundBean.setStatus(r.id, 'OPEN')}"
+                                                           rendered="#{r.status != 'OPEN' and r.status != 'CLOSED'}"
+                                                           styleClass="btn btn-sm btn-success"
+                                                           style="margin-right: 8px; text-decoration: none; display: inline-flex; width:auto;">
+                                                <f:ajax execute="@form" render="@form :create-round-panel"/>
+                                            </h:commandLink>
+
+                                            <h:commandLink value="Lock Predictions" 
+                                                           action="#{adminRoundBean.setStatus(r.id, 'LOCKED')}"
+                                                           rendered="#{r.status == 'OPEN'}"
+                                                           styleClass="btn btn-sm btn-secondary"
+                                                           style="margin-right: 8px; text-decoration: none; display: inline-flex; width:auto; border-color: var(--warning); color: var(--warning);">
+                                                <f:ajax execute="@form" render="@form :create-round-panel"/>
+                                            </h:commandLink>
+
+                                            <h:commandLink value="Close Stage" 
+                                                           action="#{adminRoundBean.setStatus(r.id, 'CLOSED')}"
+                                                           rendered="#{r.status == 'LOCKED'}"
+                                                           styleClass="btn btn-sm btn-danger"
+                                                           style="text-decoration: none; display: inline-flex; width:auto;">
+                                                <f:ajax execute="@form" render="@form :create-round-panel"/>
+                                            </h:commandLink>
+                                        </td>
+                                    </tr>
+                                </ui:repeat>
+                            </tbody>
+                        </table>
+                    </div>
                 </h:panelGroup>
             </h:form>
         </div>

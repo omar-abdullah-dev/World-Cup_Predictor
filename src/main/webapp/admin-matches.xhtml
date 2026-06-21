@@ -7,21 +7,23 @@
                 xmlns:f="http://xmlns.jcp.org/jsf/core"
                 template="/templates/layout.xhtml">
 
-    <ui:define name="title">Match Administration</ui:define>
+    <ui:define name="title">Match Administration - World Cup Predictor</ui:define>
 
     <ui:define name="content">
+        <!-- Page Header -->
         <div class="page-header">
-            <h2>&#9917; Match Administration</h2>
-            <p>Enter match results and manage fixtures.</p>
+            <h2>⚙️ Match Administration</h2>
+            <p>Admin Control: Schedule new matches, record final scores, and manage tournament stages.</p>
         </div>
 
+        <!-- Feedback Messages -->
         <h:messages globalOnly="false" layout="list" styleClass="faces-messages"
                     infoClass="message-success" errorClass="message-error"/>
 
-        <!-- Schedule New Match -->
+        <!-- Schedule New Match Card -->
         <div class="card">
-            <h3>Schedule New Match</h3>
-            <h:form id="create-match-form" styleClass="form-grid">
+            <h3>📅 Schedule New Match</h3>
+            <h:form id="create-match-form" styleClass="form-grid" style="margin-bottom:0;">
                 <div class="form-group">
                     <label for="homeTeam">Home Team</label>
                     <h:selectOneMenu id="homeTeam" value="#{adminMatchBean.homeTeam}"
@@ -50,162 +52,213 @@
                         <f:passThroughAttribute name="type" value="datetime-local"/>
                     </h:inputText>
                 </div>
-                <div class="form-actions" style="display:flex; align-items:flex-end;">
+                <div class="form-actions" style="display:flex; align-items:flex-end; margin-bottom:0;">
                     <h:commandButton value="Schedule Match"
                                      action="#{adminMatchBean.createMatch}"
-                                     styleClass="btn btn-primary"/>
+                                     styleClass="btn btn-primary" style="width: 100%;"/>
                 </div>
             </h:form>
         </div>
 
-        <!-- Tournament Fixtures -->
+        <!-- Section Header -->
         <div class="page-header section-header">
-            <h3>Tournament Fixtures</h3>
+            <h3>📋 Scheduled Tournament Fixtures</h3>
         </div>
 
+        <!-- Fixtures List -->
         <div class="match-dash-list">
             <h:panelGroup rendered="#{empty adminMatchBean.matchRows}">
-                <div class="card" style="text-align:center;">
-                    <p class="form-hint">No matches found.</p>
+                <div class="card empty-state">
+                    <p>No tournament fixtures have been scheduled yet.</p>
                 </div>
             </h:panelGroup>
 
             <ui:repeat value="#{adminMatchBean.matchRows}" var="row">
                 <h:form styleClass="match-dash-item">
 
-                    <!-- Top -->
+                    <!-- Top Meta Row -->
                     <div class="match-dash-item-top">
                         <div>
-                            <span class="match-stage">Match #<h:outputText value="#{row.match.id}"/></span>
-                            <span style="margin:0 8px; color:#9ca3af;">|</span>
+                            <span class="match-stage">Fixture #<h:outputText value="#{row.match.id}"/></span>
+                            <span style="margin:0 var(--space-xs); color:var(--text-muted);">|</span>
                             <span class="match-kickoff">
-                                <h:outputText value="#{row.match.kickoffDate}">
+                                📅 <h:outputText value="#{row.match.kickoffDate}">
                                     <f:convertDateTime type="localDateTime" pattern="dd MMM yyyy - HH:mm"/>
                                 </h:outputText>
                             </span>
                             <h:panelGroup rendered="#{row.match.isKnockoutMatch()}" layout="inline">
-                                <span class="badge badge-knockout" style="margin-left:8px;">&#127942; Knockout</span>
+                                <span class="badge badge-knockout" style="margin-left:var(--space-xs);">🏆 Knockout</span>
+                            </h:panelGroup>
+                        </div>
+                        
+                        <!-- Delete Match Link -->
+                        <div class="match-dash-item-meta">
+                            <h:panelGroup rendered="#{row.deletable and authBean.admin}">
+                                <h:commandLink value="🗑️ Delete"
+                                               action="#{adminMatchBean.deleteMatch(row.matchId)}"
+                                               styleClass="match-dash-delete-link"
+                                               onclick="return confirm('Are you sure you want to delete this match?');"/>
                             </h:panelGroup>
                         </div>
                     </div>
 
-                    <!-- Score entry -->
-                    <div class="match-dash-item-body">
-                        <div class="pred-match-team" style="text-align:right;">
-                            <span class="match-team-name" style="margin-right:15px; font-size:1.1em;">
-                                <h:outputText value="#{row.match.homeTeam}"/>
-                            </span>
-                            <span class="team-initials-badge" style="display:inline-flex; vertical-align:middle; margin:0;">
-                                <h:outputText value="#{adminMatchBean.getTeamInitials(row.match.homeTeam)}"/>
-                            </span>
-                        </div>
+                    <!-- Finished Matches Result display / edit -->
+                    <h:panelGroup rendered="#{row.finished}">
+                        <h:panelGroup rendered="#{authBean.admin and row.match.canEditResult()}">
+                            <!-- Scored & result editable within grace period -->
+                            <div class="match-dash-item-body">
+                                <div class="pred-match-team" style="text-align:right;">
+                                    <span class="match-team-name" style="margin-right:var(--space-sm); font-size:1.15em;"><h:outputText value="#{row.match.homeTeam}"/></span>
+                                    <span class="team-initials-badge" style="display:inline-flex; vertical-align:middle; margin:0;">
+                                        <h:outputText value="#{adminMatchBean.getTeamInitials(row.match.homeTeam)}"/>
+                                    </span>
+                                </div>
+                                
+                                <div class="match-dash-score-display" style="flex-direction:column; gap:var(--space-xs);">
+                                    <div style="display:flex; align-items:center; gap:var(--space-xs);">
+                                        <span class="match-dash-score-box match-score-winner">
+                                            <h:outputText value="#{row.match.homeScore}"/>
+                                        </span>
+                                        <span class="match-dash-score-dash">–</span>
+                                        <span class="match-dash-score-box match-score-winner">
+                                            <h:outputText value="#{row.match.awayScore}"/>
+                                        </span>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:var(--space-2xs); background:rgba(255,255,255,0.03); border:1px solid var(--border-color); padding: 4px var(--space-xs); border-radius: var(--radius-sm);">
+                                        <input type="number" min="0" name="hs_#{row.match.id}" value="#{row.match.homeScore}" class="match-dash-score-input"/>
+                                        <span class="match-dash-vs">:</span>
+                                        <input type="number" min="0" name="as_#{row.match.id}" value="#{row.match.awayScore}" class="match-dash-score-input"/>
+                                        <h:commandButton value="Update" action="#{adminMatchBean.forceSubmitResult(row.match.id)}" styleClass="btn btn-sm btn-primary" style="margin-left: 8px; width:auto; display:inline-flex;"/>
+                                    </div>
+                                </div>
 
-                        <div class="match-dash-score-entry">
-                            <h:panelGroup rendered="#{row.match.status != 'FINISHED' or row.match.canEditResult()}">
-                                <input type="number" min="0" placeholder="0"
-                                       name="hs_#{row.match.id}"
-                                       value="#{row.match.status == 'FINISHED' ? row.match.homeScore : ''}"
-                                       class="match-dash-score-input"/>
+                                <div class="pred-match-team" style="text-align:left;">
+                                    <span class="team-initials-badge" style="display:inline-flex; vertical-align:middle; margin:0; margin-right:var(--space-sm);">
+                                        <h:outputText value="#{adminMatchBean.getTeamInitials(row.match.awayTeam)}"/>
+                                    </span>
+                                    <span class="match-team-name" style="font-size:1.15em;"><h:outputText value="#{row.match.awayTeam}"/></span>
+                                </div>
+                            </div>
+                        </h:panelGroup>
+
+                        <h:panelGroup rendered="#{not (authBean.admin and row.match.canEditResult())}">
+                            <!-- Locked finished matches -->
+                            <div class="match-dash-item-body">
+                                <div class="pred-match-team" style="text-align:right;">
+                                    <span class="match-team-name" style="margin-right:var(--space-sm); font-size:1.15em;"><h:outputText value="#{row.match.homeTeam}"/></span>
+                                    <span class="team-initials-badge" style="display:inline-flex; vertical-align:middle; margin:0;">
+                                        <h:outputText value="#{adminMatchBean.getTeamInitials(row.match.homeTeam)}"/>
+                                    </span>
+                                </div>
+                                <div class="match-dash-score-display">
+                                    <span class="match-dash-score-box #{row.match.homeScore gt row.match.awayScore ? 'match-score-winner' : ''}">
+                                        <h:outputText value="#{row.match.homeScore}"/>
+                                    </span>
+                                    <span class="match-dash-score-dash">–</span>
+                                    <span class="match-dash-score-box #{row.match.awayScore gt row.match.homeScore ? 'match-score-winner' : ''}">
+                                        <h:outputText value="#{row.match.awayScore}"/>
+                                    </span>
+                                </div>
+                                <div class="pred-match-team" style="text-align:left;">
+                                    <span class="team-initials-badge" style="display:inline-flex; vertical-align:middle; margin:0; margin-right:var(--space-sm);">
+                                        <h:outputText value="#{adminMatchBean.getTeamInitials(row.match.awayTeam)}"/>
+                                    </span>
+                                    <span class="match-team-name" style="font-size:1.15em;"><h:outputText value="#{row.match.awayTeam}"/></span>
+                                </div>
+                            </div>
+                        </h:panelGroup>
+                    </h:panelGroup>
+
+                    <!-- Unfinished Matches Score Entry -->
+                    <h:panelGroup rendered="#{not row.finished}">
+                        <div class="match-dash-item-body">
+                            <div class="pred-match-team" style="text-align:right;">
+                                <span class="match-team-name" style="margin-right:var(--space-sm); font-size:1.15em;"><h:outputText value="#{row.match.homeTeam}"/></span>
+                                <span class="team-initials-badge" style="display:inline-flex; vertical-align:middle; margin:0;">
+                                    <h:outputText value="#{adminMatchBean.getTeamInitials(row.match.homeTeam)}"/>
+                                </span>
+                            </div>
+                            
+                            <div class="match-dash-score-entry">
+                                <input type="number" min="0" placeholder="H" name="hs_#{row.match.id}" class="match-dash-score-input"/>
                                 <span class="match-dash-vs">:</span>
-                                <input type="number" min="0" placeholder="0"
-                                       name="as_#{row.match.id}"
-                                       value="#{row.match.status == 'FINISHED' ? row.match.awayScore : ''}"
-                                       class="match-dash-score-input"/>
-                                <h:commandButton
-                                        value="#{row.match.status == 'FINISHED' ? 'Update' : 'Save'}"
-                                        action="#{adminMatchBean.forceSubmitResult(row.match.id)}"
-                                        styleClass="btn btn-sm btn-success" style="margin-left:10px;"/>
-                            </h:panelGroup>
-
-                            <h:panelGroup rendered="#{row.match.status == 'FINISHED' and row.match.isResultLocked()}">
-                                <span class="match-dash-score-box"><h:outputText value="#{row.match.homeScore}"/></span>
-                                <span class="match-dash-score-dash">-</span>
-                                <span class="match-dash-score-box"><h:outputText value="#{row.match.awayScore}"/></span>
-                            </h:panelGroup>
+                                <input type="number" min="0" placeholder="A" name="as_#{row.match.id}" class="match-dash-score-input"/>
+                            </div>
+                            
+                            <div class="pred-match-team" style="text-align:left;">
+                                <span class="team-initials-badge" style="display:inline-flex; vertical-align:middle; margin:0; margin-right:var(--space-sm);">
+                                    <h:outputText value="#{adminMatchBean.getTeamInitials(row.match.awayTeam)}"/>
+                                </span>
+                                <span class="match-team-name" style="font-size:1.15em;"><h:outputText value="#{row.match.awayTeam}"/></span>
+                            </div>
                         </div>
-
-                        <div class="pred-match-team" style="text-align:left;">
-                            <span class="team-initials-badge" style="display:inline-flex; vertical-align:middle; margin:0; margin-right:15px;">
-                                <h:outputText value="#{adminMatchBean.getTeamInitials(row.match.awayTeam)}"/>
-                            </span>
-                            <span class="match-team-name" style="font-size:1.1em;">
-                                <h:outputText value="#{row.match.awayTeam}"/>
-                            </span>
+                        <div class="match-dash-save-row">
+                            <h:commandButton value="Save Score Result"
+                                             action="#{adminMatchBean.forceSubmitResult(row.match.id)}"
+                                             styleClass="btn btn-success btn-sm" style="width:auto; display:inline-flex;"/>
                         </div>
-                    </div>
+                    </h:panelGroup>
 
-                    <!-- Knockout extra fields -->
-                    <h:panelGroup
-                            rendered="#{row.match.isKnockoutMatch() and (row.match.status != 'FINISHED' or row.match.canEditResult())}"
-                            layout="block"
-                            styleClass="knockout-extra-panel">
+                    <!-- here is the comment -->
+
+                    <!-- Knockout Match Extra Time and Penalty entry fields -->
+                    <h:panelGroup rendered="#{row.match.isKnockoutMatch() and (row.match.status != 'FINISHED' or row.match.canEditResult())}"
+                                  layout="block" styleClass="knockout-extra-panel">
                         <div class="knockout-extra-row">
                             <span class="knockout-extra-label">Extra Time</span>
-                            <input type="number" min="0" placeholder="ET Home"
-                                   name="et_hs_#{row.match.id}"
-                                   value="#{row.match.extraTimeHomeScore}"
-                                   class="match-dash-score-input"/>
+                            <input type="number" min="0" placeholder="Home ET" name="et_hs_#{row.match.id}" value="#{row.match.extraTimeHomeScore}" class="match-dash-score-input"/>
                             <span class="match-dash-vs">:</span>
-                            <input type="number" min="0" placeholder="ET Away"
-                                   name="et_as_#{row.match.id}"
-                                   value="#{row.match.extraTimeAwayScore}"
-                                   class="match-dash-score-input"/>
+                            <input type="number" min="0" placeholder="Away ET" name="et_as_#{row.match.id}" value="#{row.match.extraTimeAwayScore}" class="match-dash-score-input"/>
                         </div>
                         <div class="knockout-extra-row">
                             <span class="knockout-extra-label">Penalties</span>
-                            <input type="number" min="0" placeholder="Pen Home"
-                                   name="pen_hs_#{row.match.id}"
-                                   value="#{row.match.penaltyHomeScore}"
-                                   class="match-dash-score-input"/>
+                            <input type="number" min="0" placeholder="Home Pen" name="pen_hs_#{row.match.id}" value="#{row.match.penaltyHomeScore}" class="match-dash-score-input"/>
                             <span class="match-dash-vs">:</span>
-                            <input type="number" min="0" placeholder="Pen Away"
-                                   name="pen_as_#{row.match.id}"
-                                   value="#{row.match.penaltyAwayScore}"
-                                   class="match-dash-score-input"/>
+                            <input type="number" min="0" placeholder="Away Pen" name="pen_as_#{row.match.id}" value="#{row.match.penaltyAwayScore}" class="match-dash-score-input"/>
                         </div>
                         <div class="knockout-extra-row">
                             <span class="knockout-extra-label">Decided By</span>
-                            <select name="decided_by_#{row.match.id}" class="form-input" style="width:auto; min-width:160px;">
+                            <select name="decided_by_#{row.match.id}" class="form-input" style="width:auto; min-width:160px; padding: 6px 10px;">
                                 <option value="90">90 Minutes</option>
-                                <option value="ET">Extra Time</option>
-                                <option value="PEN">Penalties</option>
+                                <option value="ET">Extra Time (ET)</option>
+                                <option value="PEN">Penalties (PEN)</option>
                             </select>
                         </div>
                     </h:panelGroup>
 
-                    <!-- Knockout result locked -->
-                    <h:panelGroup
-                            rendered="#{row.match.isKnockoutMatch() and row.match.status == 'FINISHED' and row.match.isResultLocked() and row.match.matchDecidedBy != null}"
-                            layout="block"
-                            styleClass="knockout-result-panel">
+                    <!-- Knockout completed result preview -->
+                    <h:panelGroup rendered="#{row.match.isKnockoutMatch() and row.match.status == 'FINISHED' and row.match.isResultLocked() and row.match.matchDecidedBy != null}"
+                                  layout="block" styleClass="knockout-result-panel">
                         <span class="knockout-result-badge">
-                            Decided: <strong><h:outputText value="#{row.match.matchDecidedBy}"/></strong>
+                            🏆 Decided By: <strong><h:outputText value="#{row.match.matchDecidedBy}"/></strong>
                             <h:panelGroup rendered="#{row.match.extraTimeHomeScore != null}" layout="inline">
-                                | ET: <h:outputText value="#{row.match.extraTimeHomeScore}"/>-<h:outputText value="#{row.match.extraTimeAwayScore}"/>
+                                | ET: <h:outputText value="#{row.match.extraTimeHomeScore}"/>–<h:outputText value="#{row.match.extraTimeAwayScore}"/>
                             </h:panelGroup>
                             <h:panelGroup rendered="#{row.match.penaltyHomeScore != null}" layout="inline">
-                                | PEN: <h:outputText value="#{row.match.penaltyHomeScore}"/>-<h:outputText value="#{row.match.penaltyAwayScore}"/>
+                                | PEN: <h:outputText value="#{row.match.penaltyHomeScore}"/>–<h:outputText value="#{row.match.penaltyAwayScore}"/>
                             </h:panelGroup>
                         </span>
                     </h:panelGroup>
 
-                    <!-- Status bar -->
+                    <!-- Bottom Status Bar -->
                     <div class="match-dash-status #{row.match.status == 'FINISHED' ? (row.match.isResultLocked() ? 'match-dash-status-closed' : 'match-dash-status-finished') : (row.match.hasStarted() ? 'match-dash-status-live' : 'match-dash-status-scheduled')}">
                         <h:panelGroup rendered="#{row.match.status == 'SCHEDULED' and not row.match.hasStarted()}">
                             <span>Status: <strong>Scheduled</strong></span>
                         </h:panelGroup>
                         <h:panelGroup rendered="#{row.match.status == 'SCHEDULED' and row.match.hasStarted()}">
-                            <span>Status: <strong>Live / In Progress</strong></span>
+                            <span>⚡ Status: <strong>Live / In Progress</strong></span>
                         </h:panelGroup>
                         <h:panelGroup rendered="#{row.match.status == 'FINISHED' and not row.match.isResultLocked()}">
-                            <span>Status: <strong>Scored</strong> — Grace window open until
-                                <h:outputText value="#{row.match.resultEnteredAt.plusHours(4)}">
-                                    <f:convertDateTime type="localDateTime" pattern="dd MMM yyyy HH:mm"/>
-                                </h:outputText>
+                            <span>✓ Status: <strong>Result Saved</strong> — Grace window active until
+                                <strong>
+                                    <h:outputText value="#{row.match.resultEnteredAt.plusHours(4)}">
+                                        <f:convertDateTime type="localDateTime" pattern="dd MMM HH:mm"/>
+                                    </h:outputText>
+                                </strong>
                             </span>
                         </h:panelGroup>
                         <h:panelGroup rendered="#{row.match.status == 'FINISHED' and row.match.isResultLocked()}">
-                            <span>Status: <strong>Locked</strong></span>
+                            <span>🔒 Status: <strong>Result Locked</strong></span>
                         </h:panelGroup>
                     </div>
 

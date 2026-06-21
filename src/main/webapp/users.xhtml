@@ -7,75 +7,93 @@
                 xmlns:f="http://xmlns.jcp.org/jsf/core"
                 template="/templates/layout.xhtml">
 
-    <ui:define name="title">Users - World Cup Predictor</ui:define>
+    <ui:define name="title">Users Management - World Cup Predictor</ui:define>
 
     <ui:define name="content">
+        <!-- Page Header -->
         <div class="page-header">
-            <h2>&#128100; Users</h2>
-            <p>Manage participants in the World Cup prediction competition</p>
+            <h2>👥 User Management</h2>
+            <p>Admin Control: Manage platform participants, authorization levels, and roles.</p>
         </div>
 
+        <!-- Feedback Messages -->
         <h:panelGroup rendered="#{not empty userBean.successMessage}">
-            <div class="message-success"><h:outputText value="#{userBean.successMessage}"/></div>
+            <div class="message-success">
+                <span>✓</span>
+                <h:outputText value="#{userBean.successMessage}"/>
+            </div>
         </h:panelGroup>
         <h:panelGroup rendered="#{not empty userBean.errorMessage}">
-            <div class="message-error"><h:outputText value="#{userBean.errorMessage}"/></div>
+            <div class="message-error">
+                <span>⚠️</span>
+                <h:outputText value="#{userBean.errorMessage}"/>
+            </div>
         </h:panelGroup>
 
-
-
+        <!-- Create User Card (Admin Only) -->
         <h:panelGroup rendered="#{authBean.admin}">
             <div class="card">
-                <h3>Create New User</h3>
+                <h3>🛠️ Authorize &amp; Create New User</h3>
                 <h:form>
                     <div class="form-grid">
                         <div class="form-group">
-                            <h:outputLabel for="username" value="Username"/>
+                            <h:outputLabel for="username" value="AD Username (sAMAccountName)"/>
                             <h:inputText id="username" value="#{userBean.username}" required="true"
-                                         requiredMessage="Username is required" styleClass="form-input"/>
+                                         requiredMessage="Username is required" styleClass="form-input"
+                                         placeholder="e.g. jdoe"/>
                         </div>
                     </div>
-                    <h:commandButton value="Create User" action="#{userBean.createUser}" styleClass="btn btn-primary"/>
+                    <div class="form-actions">
+                        <h:commandButton value="Create User" action="#{userBean.createUser}" styleClass="btn btn-primary"/>
+                    </div>
                 </h:form>
             </div>
         </h:panelGroup>
 
-
-
+        <!-- Directory Card -->
         <div class="card">
-            <h3>All Users (#{userBean.users.size()})</h3>
+            <h3>📋 All Registered Users <span style="font-weight: normal; font-size: 0.85em; color: var(--text-muted); margin-left: var(--space-xs);">(Total: #{userBean.users.size()})</span></h3>
+            
             <h:panelGroup rendered="#{empty userBean.users}">
-                <p class="empty-state">No users yet. Create one above.</p>
+                <div class="empty-state">
+                    <p>No user accounts have been created yet.</p>
+                </div>
             </h:panelGroup>
 
-
-
             <h:panelGroup rendered="#{not empty userBean.users}">
-                <h:dataTable value="#{userBean.users}" var="user" styleClass="data-table">
-                    <h:column>
-                        <f:facet name="header">ID</f:facet>
-                        <h:outputText value="#{user.id}"/>
-                    </h:column>
-                    <h:column>
-                        <f:facet name="header">Username</f:facet>
-                        <h:outputText value="#{user.username}"/>
-                    </h:column>
-                    <h:column>
-                        <f:facet name="header">Total Points</f:facet>
-                        <span class="points-badge"><h:outputText value="#{user.totalPoints}"/></span>
-                    </h:column>
-                    <h:column>
-                        <f:facet name="header">Role</f:facet>
-                        <h:outputText value="#{user.role}"/>
-                    </h:column>
-                    <h:column rendered="#{authBean.admin}">
-                        <f:facet name="header">Actions</f:facet>
-                        <h:form style="display:inline;">
-                            <h:commandButton value="Promote" action="#{userBean.promoteToAdmin(user.id)}" styleClass="btn btn-warning btn-sm" rendered="#{not user.admin}"/>
-                            <h:commandButton value="Demote" action="#{userBean.demoteFromAdmin(user.id)}" styleClass="btn btn-secondary btn-sm" rendered="#{user.admin}"/>
-                        </h:form>
-                    </h:column>
-                </h:dataTable>
+                <div class="table-responsive">
+                    <h:dataTable value="#{userBean.users}" var="user" styleClass="data-table">
+                        <h:column>
+                            <f:facet name="header">ID</f:facet>
+                            <h:outputText value="#{user.id}" style="color: var(--text-muted); font-size: 0.9em;"/>
+                        </h:column>
+                        <h:column>
+                            <f:facet name="header">Username</f:facet>
+                            <strong><h:outputText value="#{user.username}"/></strong>
+                        </h:column>
+                        <h:column>
+                            <f:facet name="header">Leaderboard Points</f:facet>
+                            <span class="points-badge points-exact"><h:outputText value="#{user.totalPoints}"/> PTS</span>
+                        </h:column>
+                        <h:column>
+                            <f:facet name="header">Security Role</f:facet>
+                            <span class="badge #{user.admin ? 'badge-active' : 'badge-knockout'}">
+                                <h:outputText value="#{user.role}"/>
+                            </span>
+                        </h:column>
+                        <h:column rendered="#{authBean.admin}">
+                            <f:facet name="header">Control Actions</f:facet>
+                            <h:form style="display:inline; margin: 0; padding: 0;">
+                                <h:commandButton value="Promote Admin" action="#{userBean.promoteToAdmin(user.id)}" 
+                                                 styleClass="btn btn-warning btn-sm" rendered="#{not user.admin}"
+                                                 style="width: auto; display: inline-flex;"/>
+                                <h:commandButton value="Demote User" action="#{userBean.demoteFromAdmin(user.id)}" 
+                                                 styleClass="btn btn-secondary btn-sm" rendered="#{user.admin}"
+                                                 style="width: auto; display: inline-flex;"/>
+                            </h:form>
+                        </h:column>
+                    </h:dataTable>
+                </div>
             </h:panelGroup>
         </div>
     </ui:define>
