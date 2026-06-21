@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    WebLogic Application Deployment Descriptor
+
+    Ensures CDI beans are discovered and the application classloader
+    is configured correctly for WebLogic 12c.
+
+    Set prefer-web-inf-classes to false to use WebLogic's Jakarta EE
+    implementation rather than bundled ones.
+-->
+<weblogic-application xmlns="http://xmlns.oracle.com/weblogic/weblogic-application"
+                      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                      xsi:schemaLocation="http://xmlns.oracle.com/weblogic/weblogic-application
+                          http://xmlns.oracle.com/weblogic/weblogic-application/1.5/weblogic-application.xsd">
+
+    <application-param>
+        <param-name>webapp.encoding.default</param-name>
+        <param-value>UTF-8</param-value>
+    </application-param>
+
+    <!-- Use server-provided Jakarta EE APIs (CDI, JSF, JTA) rather than bundled ones -->
+    <!-- Change to true only if you bundle your own JSF/CDI implementations -->
+    <prefer-application-packages>
+        <package-name>com.worldcup.*</package-name>
+    </prefer-application-packages>
+
+</weblogic-application>

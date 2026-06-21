@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE weblogic-web-app PUBLIC
+    "-//BEA Systems, Inc.//DTD Web Application 8.1//EN"
+    "http://www.bea.com/servers/wls810/dtd/weblogic810-web-jar.dtd">
+
+<!--
+    WebLogic 12c Deployment Descriptor
+
+    Maps the application's logical JNDI name to the actual WebLogic DataSource JNDI name.
+
+    USAGE:
+      1. Create a JDBC DataSource in WebLogic Admin Console.
+      2. Set its JNDI Name to: jdbc/WorldCupDS
+      3. Deploy this WAR — the mapping below links the app's lookup to WebLogic's name.
+
+    No source code changes required. The @Resource(lookup="java:jboss/datasources/WorldCupDS")
+    in JdbcHelper.java is resolved via this mapping at deploy time.
+
+    If you name your WebLogic DataSource differently, update jdbc/WorldCupDS below.
+-->
+<weblogic-web-app xmlns="http://xmlns.oracle.com/weblogic/weblogic-web-app"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://xmlns.oracle.com/weblogic/weblogic-web-app
+                      http://xmlns.oracle.com/weblogic/weblogic-web-app/1.4/weblogic-web-app.xsd">
+
+    <!-- DataSource JNDI mapping: WildFly name → WebLogic name -->
+    <resource-description>
+        <res-ref-name>java:jboss/datasources/WorldCupDS</res-ref-name>
+        <jndi-name>jdbc/WorldCupDS</jndi-name>
+    </resource-description>
+
+    <!-- Context root -->
+    <context-root>/world-cup-predictor</context-root>
+
+</weblogic-web-app>
