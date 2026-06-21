@@ -10,23 +10,22 @@
     <packaging>war</packaging>
 
     <name>World Cup Predictor</name>
-    <description>Football match prediction platform - Jakarta EE 10 / WildFly with PostgreSQL</description>
+    <description>Football match prediction platform - Jakarta EE 10 / WildFly + PostgreSQL (Oracle-ready)</description>
 
     <properties>
-        <!-- For WebLogic: set Jackson and Hibernate scope to provided if server ships them -->
-        <!-- Source/target set to 1.8 for Java 8 / WebLogic migration compatibility -->
+        <!-- Java 8 source compatibility for WebLogic migration -->
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <failOnMissingWebXml>false</failOnMissingWebXml>
         <jakartaee.version>10.0.0</jakartaee.version>
-        <hibernate.version>6.4.4.Final</hibernate.version>
         <postgresql.version>42.7.3</postgresql.version>
         <junit.version>5.10.2</junit.version>
+        <!-- hibernate-core and hibernate.version intentionally removed — pure JDBC only -->
     </properties>
 
     <dependencies>
-        <!-- Jakarta EE Web API -->
+        <!-- Jakarta EE Web API — provided by WildFly / WebLogic -->
         <dependency>
             <groupId>jakarta.platform</groupId>
             <artifactId>jakarta.jakartaee-web-api</artifactId>
@@ -34,20 +33,37 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- JPA/Hibernate ORM -->
-        <!-- For WebLogic: set scope to provided if server ships Hibernate -->
+        <!-- Jakarta Persistence API — provided scope only (annotations compile-time only).
+             No Hibernate runtime dependency. -->
         <dependency>
-            <groupId>org.hibernate.orm</groupId>
-            <artifactId>hibernate-core</artifactId>
-            <version>${hibernate.version}</version>
+            <groupId>jakarta.persistence</groupId>
+            <artifactId>jakarta.persistence-api</artifactId>
+            <version>3.1.0</version>
+            <scope>provided</scope>
         </dependency>
 
-        <!-- PostgreSQL JDBC Driver -->
-        <!-- For Oracle/WebLogic: remove this and use Oracle JDBC driver instead -->
+        <!-- PostgreSQL JDBC Driver — local and staging.
+             For Oracle/WebLogic: set scope to provided and supply ojdbc11 via server classpath. -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <version>${postgresql.version}</version>
+            <!-- runtime scope: not needed for compilation, only for execution -->
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Oracle JDBC Driver (ojdbc11) — production.
+             Scope 'provided' because WebLogic ships the driver on the server classpath.
+             For local testing with Oracle XE, change scope to 'runtime' and ensure the
+             jar is in your local Maven repo:
+               mvn install:install-file -Dfile=ojdbc11.jar -DgroupId=com.oracle.database.jdbc
+                 -DartifactId=ojdbc11 -Dversion=21.13.0.0 -Dpackaging=jar
+        -->
+        <dependency>
+            <groupId>com.oracle.database.jdbc</groupId>
+            <artifactId>ojdbc11</artifactId>
+            <version>21.13.0.0</version>
+            <scope>provided</scope>
         </dependency>
 
         <!-- Unit testing -->
@@ -67,8 +83,9 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.12.1</version>
                 <configuration>
-                    <source>11</source>
-                    <target>11</target>
+                    <!-- Java 8 / WebLogic migration compatibility -->
+                    <source>1.8</source>
+                    <target>1.8</target>
                 </configuration>
             </plugin>
             <plugin>
