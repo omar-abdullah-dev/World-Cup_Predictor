@@ -5,10 +5,10 @@
                  https://jakarta.ee/xml/ns/persistence/persistence_3_0.xsd"
              version="3.0">
 
-    <persistence-unit name="WorldCupPU" transaction-type="JTA">
+    <persistence-unit name="WorldCupPU" transaction-type="RESOURCE_LOCAL">
         <description>World Cup Predictor JPA persistence unit (PostgreSQL)</description>
 
-        <jta-data-source>java:jboss/datasources/WorldCupDS</jta-data-source>
+        <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
 
         <class>com.worldcup.model.User</class>
         <class>com.worldcup.model.Match</class>
@@ -21,16 +21,17 @@
         <class>com.worldcup.model.UserSession</class>
 
         <properties>
-            <!-- Hibernate dialect for PostgreSQL (current) -->
-            <!-- Oracle (WebLogic): replace dialect with org.hibernate.dialect.Oracle12cDialect
-                 and change jta-data-source to match WebLogic JNDI name, e.g.:
-                 <jta-data-source>jdbc/WorldCupDS</jta-data-source> -->
+            <property name="jboss.as.jpa.managed" value="false"/>
+
+            <property name="hibernate.connection.driver_class" value="org.postgresql.Driver"/>
+            <property name="hibernate.connection.url" value="jdbc:postgresql://localhost:5432/worldclub"/>
+            <property name="hibernate.connection.username" value="world_user"/>
+            <property name="hibernate.connection.password" value="password"/>
+
             <property name="hibernate.dialect" value="org.hibernate.dialect.PostgreSQLDialect"/>
-            <!-- Hibernate auto-manages schema: creates/updates tables from @Entity annotations.
-                 No Flyway/Liquibase. No manual SQL migration scripts needed. -->
-            <property name="hibernate.hbm2ddl.auto" value="update"/>
-            <property name="hibernate.show_sql" value="false"/>
-            <property name="hibernate.format_sql" value="false"/>
+            <property name="hibernate.hbm2ddl.auto" value="validate"/>
+            <property name="hibernate.show_sql" value="true"/>
+            <property name="hibernate.format_sql" value="true"/>
         </properties>
     </persistence-unit>
 </persistence>

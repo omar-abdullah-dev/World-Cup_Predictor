@@ -12,30 +12,41 @@
     <ui:define name="content">
         <div class="page-header">
             <h2>&#9917; Match Administration</h2>
-            <p>Schedule matches, enter scores, manage fixtures. All data is entered manually.</p>
+            <p>Enter match results and manage fixtures.</p>
         </div>
 
         <h:messages globalOnly="false" layout="list" styleClass="faces-messages"
                     infoClass="message-success" errorClass="message-error"/>
 
-        <!-- ── Schedule Match ── -->
+        <!-- Schedule New Match -->
         <div class="card">
             <h3>Schedule New Match</h3>
             <h:form id="create-match-form" styleClass="form-grid">
                 <div class="form-group">
                     <label for="homeTeam">Home Team</label>
-                    <h:inputText id="homeTeam" value="#{adminMatchBean.homeTeam}" required="true"
-                                 requiredMessage="Home team is required" styleClass="form-input"/>
+                    <h:selectOneMenu id="homeTeam" value="#{adminMatchBean.homeTeam}"
+                                     required="true" requiredMessage="Home team is required"
+                                     styleClass="form-input">
+                        <f:selectItem itemLabel="-- Select Home Team --" itemValue=""/>
+                        <f:selectItems value="#{adminMatchBean.teamNames}" var="t"
+                                       itemValue="#{t}" itemLabel="#{t}"/>
+                    </h:selectOneMenu>
                 </div>
                 <div class="form-group">
                     <label for="awayTeam">Away Team</label>
-                    <h:inputText id="awayTeam" value="#{adminMatchBean.awayTeam}" required="true"
-                                 requiredMessage="Away team is required" styleClass="form-input"/>
+                    <h:selectOneMenu id="awayTeam" value="#{adminMatchBean.awayTeam}"
+                                     required="true" requiredMessage="Away team is required"
+                                     styleClass="form-input">
+                        <f:selectItem itemLabel="-- Select Away Team --" itemValue=""/>
+                        <f:selectItems value="#{adminMatchBean.teamNames}" var="t"
+                                       itemValue="#{t}" itemLabel="#{t}"/>
+                    </h:selectOneMenu>
                 </div>
                 <div class="form-group">
                     <label for="kickoffDate">Kickoff Date &amp; Time</label>
-                    <h:inputText id="kickoffDate" value="#{adminMatchBean.kickoffDate}" required="true"
-                                 requiredMessage="Kickoff date is required" styleClass="form-input">
+                    <h:inputText id="kickoffDate" value="#{adminMatchBean.kickoffDate}"
+                                 required="true" requiredMessage="Kickoff date is required"
+                                 styleClass="form-input">
                         <f:passThroughAttribute name="type" value="datetime-local"/>
                     </h:inputText>
                 </div>
@@ -47,7 +58,7 @@
             </h:form>
         </div>
 
-        <!-- ── Fixtures ── -->
+        <!-- Tournament Fixtures -->
         <div class="page-header section-header">
             <h3>Tournament Fixtures</h3>
         </div>
@@ -55,7 +66,7 @@
         <div class="match-dash-list">
             <h:panelGroup rendered="#{empty adminMatchBean.matchRows}">
                 <div class="card" style="text-align:center;">
-                    <p class="form-hint">No matches scheduled yet.</p>
+                    <p class="form-hint">No matches found.</p>
                 </div>
             </h:panelGroup>
 
@@ -76,13 +87,6 @@
                                 <span class="badge badge-knockout" style="margin-left:8px;">&#127942; Knockout</span>
                             </h:panelGroup>
                         </div>
-                        <div class="match-dash-item-meta">
-                            <h:commandLink value="&#128465; Delete"
-                                           action="#{adminMatchBean.deleteMatch(row.match.id)}"
-                                           onclick="return confirm('Delete this match?');"
-                                           rendered="#{not row.match.hasStarted() and row.match.status == 'SCHEDULED'}"
-                                           styleClass="match-dash-delete-link"/>
-                        </div>
                     </div>
 
                     <!-- Score entry -->
@@ -97,7 +101,6 @@
                         </div>
 
                         <div class="match-dash-score-entry">
-                            <!-- Editable score inputs -->
                             <h:panelGroup rendered="#{row.match.status != 'FINISHED' or row.match.canEditResult()}">
                                 <input type="number" min="0" placeholder="0"
                                        name="hs_#{row.match.id}"
@@ -114,7 +117,6 @@
                                         styleClass="btn btn-sm btn-success" style="margin-left:10px;"/>
                             </h:panelGroup>
 
-                            <!-- Locked score display -->
                             <h:panelGroup rendered="#{row.match.status == 'FINISHED' and row.match.isResultLocked()}">
                                 <span class="match-dash-score-box"><h:outputText value="#{row.match.homeScore}"/></span>
                                 <span class="match-dash-score-dash">-</span>
@@ -132,12 +134,11 @@
                         </div>
                     </div>
 
-                    <!-- ── Knockout extra fields ── -->
+                    <!-- Knockout extra fields -->
                     <h:panelGroup
                             rendered="#{row.match.isKnockoutMatch() and (row.match.status != 'FINISHED' or row.match.canEditResult())}"
                             layout="block"
                             styleClass="knockout-extra-panel">
-
                         <div class="knockout-extra-row">
                             <span class="knockout-extra-label">Extra Time</span>
                             <input type="number" min="0" placeholder="ET Home"
@@ -150,7 +151,6 @@
                                    value="#{row.match.extraTimeAwayScore}"
                                    class="match-dash-score-input"/>
                         </div>
-
                         <div class="knockout-extra-row">
                             <span class="knockout-extra-label">Penalties</span>
                             <input type="number" min="0" placeholder="Pen Home"
@@ -163,7 +163,6 @@
                                    value="#{row.match.penaltyAwayScore}"
                                    class="match-dash-score-input"/>
                         </div>
-
                         <div class="knockout-extra-row">
                             <span class="knockout-extra-label">Decided By</span>
                             <select name="decided_by_#{row.match.id}" class="form-input" style="width:auto; min-width:160px;">
@@ -174,7 +173,7 @@
                         </div>
                     </h:panelGroup>
 
-                    <!-- Knockout result display (locked) -->
+                    <!-- Knockout result locked -->
                     <h:panelGroup
                             rendered="#{row.match.isKnockoutMatch() and row.match.status == 'FINISHED' and row.match.isResultLocked() and row.match.matchDecidedBy != null}"
                             layout="block"
@@ -193,7 +192,7 @@
                     <!-- Status bar -->
                     <div class="match-dash-status #{row.match.status == 'FINISHED' ? (row.match.isResultLocked() ? 'match-dash-status-closed' : 'match-dash-status-finished') : (row.match.hasStarted() ? 'match-dash-status-live' : 'match-dash-status-scheduled')}">
                         <h:panelGroup rendered="#{row.match.status == 'SCHEDULED' and not row.match.hasStarted()}">
-                            <span>Status: <strong>Scheduled</strong> (Predictions Open)</span>
+                            <span>Status: <strong>Scheduled</strong></span>
                         </h:panelGroup>
                         <h:panelGroup rendered="#{row.match.status == 'SCHEDULED' and row.match.hasStarted()}">
                             <span>Status: <strong>Live / In Progress</strong></span>

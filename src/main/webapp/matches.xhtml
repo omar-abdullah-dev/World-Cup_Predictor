@@ -20,7 +20,7 @@
             </h:panelGroup>
         </h:panelGroup>
 
-        <!-- ===== Page header + admin create button ===== -->
+        <!-- Page header + admin create button -->
         <div class="match-dash-header">
             <div class="page-header match-dash-title-block">
                 <h2>&#9917; Matches</h2>
@@ -36,7 +36,7 @@
             </h:form>
         </div>
 
-        <!-- ===== Admin: create match form ===== -->
+        <!-- Admin: create match form -->
         <h:panelGroup rendered="#{matchBean.showCreateForm and authBean.admin}">
             <div class="card match-dash-create-card">
                 <h3>Schedule New Match</h3>
@@ -44,27 +44,39 @@
                     <div class="form-grid">
                         <div class="form-group">
                             <h:outputLabel for="homeTeam" value="Home Team"/>
-                            <h:inputText id="homeTeam" value="#{matchBean.homeTeam}" required="true"
-                                         styleClass="form-input" requiredMessage="Home team is required"/>
+                            <h:selectOneMenu id="homeTeam" value="#{matchBean.homeTeam}"
+                                             required="true" requiredMessage="Home team is required"
+                                             styleClass="form-input">
+                                <f:selectItem itemLabel="-- Select Home Team --" itemValue=""/>
+                                <f:selectItems value="#{matchBean.teamNames}" var="t"
+                                               itemValue="#{t}" itemLabel="#{t}"/>
+                            </h:selectOneMenu>
                         </div>
                         <div class="form-group">
                             <h:outputLabel for="awayTeam" value="Away Team"/>
-                            <h:inputText id="awayTeam" value="#{matchBean.awayTeam}" required="true"
-                                         styleClass="form-input" requiredMessage="Away team is required"/>
+                            <h:selectOneMenu id="awayTeam" value="#{matchBean.awayTeam}"
+                                             required="true" requiredMessage="Away team is required"
+                                             styleClass="form-input">
+                                <f:selectItem itemLabel="-- Select Away Team --" itemValue=""/>
+                                <f:selectItems value="#{matchBean.teamNames}" var="t"
+                                               itemValue="#{t}" itemLabel="#{t}"/>
+                            </h:selectOneMenu>
                         </div>
                         <div class="form-group">
                             <h:outputLabel for="kickoffDate" value="Kickoff Date &amp; Time"/>
-                            <h:inputText id="kickoffDate" value="#{matchBean.kickoffDate}" required="true"
-                                         styleClass="form-input" requiredMessage="Kickoff date is required"
-                                         type="datetime-local"/>
+                            <h:inputText id="kickoffDate" value="#{matchBean.kickoffDate}"
+                                         required="true" requiredMessage="Kickoff date is required"
+                                         styleClass="form-input" type="datetime-local"/>
                         </div>
                     </div>
-                    <h:commandButton value="Create Match" action="#{matchBean.createMatch}" styleClass="btn btn-primary"/>
+                    <h:commandButton value="Create Match"
+                                     action="#{matchBean.createMatch}"
+                                     styleClass="btn btn-primary"/>
                 </h:form>
             </div>
         </h:panelGroup>
 
-        <!-- ===== Match list ===== -->
+        <!-- Match list -->
         <div class="card match-dash-list-card">
             <h3>All Matches (<h:outputText value="#{matchBean.totalMatchCount}"/>)</h3>
 
@@ -76,7 +88,7 @@
                 <ui:repeat value="#{matchBean.matchRows}" var="row" varStatus="status">
                     <div class="match-dash-item">
 
-                        <!-- ── Card top: match number + date + admin delete ── -->
+                        <!-- Card top -->
                         <div class="match-dash-item-top">
                             <div>
                                 <span class="match-stage">Match #<h:outputText value="#{status.index + 1}"/></span>
@@ -95,9 +107,8 @@
                             </div>
                         </div>
 
-                        <!-- ── FINISHED: always show final score ── -->
+                        <!-- FINISHED -->
                         <h:panelGroup rendered="#{row.finished}">
-                            <!-- Admin within grace window: inline edit inputs sit beside the score -->
                             <h:panelGroup rendered="#{authBean.admin and row.match.canEditResult()}">
                                 <h:form styleClass="match-dash-result-form">
                                     <div class="match-dash-item-body">
@@ -105,7 +116,6 @@
                                             <span class="match-team-flag"><h:outputText value="#{matchBean.getFlagForTeam(row.match.homeTeam)}" escape="false"/></span>
                                             <span class="match-team-name"><h:outputText value="#{row.match.homeTeam}"/></span>
                                         </div>
-                                        <!-- Current score + editable inputs + button all in one row -->
                                         <div class="match-dash-score-display" style="flex-direction:column; gap:6px;">
                                             <div style="display:flex; align-items:center; gap:8px;">
                                                 <span class="match-dash-score-box match-score-winner">
@@ -139,7 +149,6 @@
                                 </h:form>
                             </h:panelGroup>
 
-                            <!-- Admin result locked OR normal user: read-only score -->
                             <h:panelGroup rendered="#{not (authBean.admin and row.match.canEditResult())}">
                                 <div class="match-dash-item-body">
                                     <div class="pred-match-team" style="text-align:right;">
@@ -163,10 +172,9 @@
                             </h:panelGroup>
                         </h:panelGroup>
 
-                        <!-- ── NOT FINISHED: admin score entry OR normal user "not started" view ── -->
+                        <!-- NOT FINISHED -->
                         <h:panelGroup rendered="#{not row.finished}">
 
-                            <!-- ADMIN: score entry form (always available for not-finished) -->
                             <h:panelGroup rendered="#{authBean.admin}">
                                 <h:form styleClass="match-dash-result-form">
                                     <div class="match-dash-item-body">
@@ -194,7 +202,6 @@
                                 </h:form>
                             </h:panelGroup>
 
-                            <!-- NORMAL USER: show teams + upcoming badge, no score inputs -->
                             <h:panelGroup rendered="#{not authBean.admin}">
                                 <div class="match-dash-item-body">
                                     <div class="pred-match-team" style="text-align:right;">
@@ -218,10 +225,11 @@
 
                         </h:panelGroup>
 
-                        <!-- ── Status bar ── -->
+                        <!-- Status bar -->
                         <div class="#{matchBean.getStatusBarClass(row.match)}">
                             <h:outputText value="#{matchBean.getStatusBarText(row.match)}"/>
                         </div>
+
                     </div>
                 </ui:repeat>
             </div>

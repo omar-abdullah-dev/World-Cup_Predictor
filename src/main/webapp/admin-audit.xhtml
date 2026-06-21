@@ -15,9 +15,7 @@
             <p>Live session tracking, login history, and full prediction audit trail.</p>
         </div>
 
-        <!-- ══════════════════════════════════════════════
-             SECTION 1 — Active Sessions
-             ══════════════════════════════════════════════ -->
+        <!-- SECTION 1 — Active Sessions -->
         <div class="admin-section">
             <h3>&#9654; Active Sessions
                 <span class="badge badge-active">#{adminAuditBean.activeSessionCount} online</span>
@@ -26,8 +24,7 @@
             <h:form id="sessForm">
                 <h:dataTable value="#{adminAuditBean.activeSessions}" var="s"
                              styleClass="data-table" headerClass="table-header"
-                             rowClasses="table-row-even,table-row-odd"
-                             emptyDataMessage="No active sessions.">
+                             rowClasses="table-row-even,table-row-odd">
 
                     <h:column>
                         <f:facet name="header">User</f:facet>
@@ -47,14 +44,14 @@
                     </h:column>
                     <h:column>
                         <f:facet name="header">Browser</f:facet>
-                        <h:outputText value="#{s.userAgent != null ? s.userAgent.substring(0, [s.userAgent.length(), 60].min()) : '-'}"/>
+                        <h:outputText value="#{s.userAgent != null ? s.userAgent.substring(0, s.userAgent.length() > 60 ? 60 : s.userAgent.length()) : '-'}"/>
                     </h:column>
                     <h:column>
                         <f:facet name="header">Action</f:facet>
                         <h:commandButton value="Terminate"
                                          styleClass="btn btn-danger btn-sm"
                                          action="#{adminAuditBean.terminateSession(s.id)}"
-                                         onclick="return confirm('Terminate session for #{s.username}?')"/>
+                                         onclick="return confirm('Terminate session?')"/>
                     </h:column>
                 </h:dataTable>
 
@@ -65,9 +62,7 @@
             </h:form>
         </div>
 
-        <!-- ══════════════════════════════════════════════
-             SECTION 2 — Session History
-             ══════════════════════════════════════════════ -->
+        <!-- SECTION 2 — Session History -->
         <div class="admin-section">
             <h3>&#128336; Session History (all time)</h3>
             <h:dataTable value="#{adminAuditBean.allSessions}" var="s"
@@ -99,9 +94,7 @@
             </h:dataTable>
         </div>
 
-        <!-- ══════════════════════════════════════════════
-             SECTION 3 — Activity Audit Log (filterable)
-             ══════════════════════════════════════════════ -->
+        <!-- SECTION 3 — Activity Audit Log -->
         <div class="admin-section">
             <h3>&#128203; Activity Audit Log</h3>
 
@@ -116,12 +109,12 @@
                                      styleClass="input-field">
                         <f:selectItems value="#{adminAuditBean.eventTypes}"
                                        var="et" itemValue="#{et}"
-                                       itemLabel="#{et.empty ? '— All events —' : et}"/>
+                                       itemLabel="#{et == '' ? '— All events —' : et}"/>
                     </h:selectOneMenu>
 
                     <h:commandButton value="Filter" styleClass="btn btn-primary"
                                      action="#{adminAuditBean.applyFilter}"/>
-                    <h:commandButton value="Clear"  styleClass="btn btn-secondary"
+                    <h:commandButton value="Clear" styleClass="btn btn-secondary"
                                      action="#{adminAuditBean.clearFilter}"
                                      immediate="true"/>
                     <h:commandButton value="&#8635; Refresh" styleClass="btn btn-secondary"
